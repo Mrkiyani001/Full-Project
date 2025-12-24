@@ -62,7 +62,20 @@ class ReportController extends BaseController
             if(!$user){
                 return $this->unauthorized();
             }
-            $reports = Report::limit($limit)->paginate($limit);
+            // Eager load reporter and reportable (post/comment/reply)
+            $reports = Report::with([
+                'user.profile', 
+                'reportable' => function($query) {
+                    $query->morphWith([
+                        Post::class => ['user.profile'],
+                        Comments::class => ['user.profile'],
+                        CommentReply::class => ['creator.profile']
+                    ]);
+                }
+            ])
+            ->where('status', 'pending') // Only show pending reports by default
+            ->latest()
+            ->paginate($limit);
             
             $data = $this->paginateData($reports, $reports->items());
             return $this->Response(true, 'Reports retrieved successfully', $data, 200);

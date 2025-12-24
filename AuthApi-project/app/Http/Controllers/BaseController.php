@@ -24,6 +24,9 @@ class BaseController extends Controller
     }
     protected function respondWithToken($token, $user)
     {
+        // Ensure profile and avatar are loaded
+        $user->load('profile.avatar');
+        
         return response()->json([
             'access_token' => $token,
             'token_type' => 'bearer',
@@ -33,6 +36,8 @@ class BaseController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'roles' => $user->getRoleNames(),
+                'profile' => $user->profile, // Include full profile relationship
+                'avatar_url' => $user->profile && $user->profile->avatar ? $user->profile->avatar->file_path : null,
             ]
         ]);
     }

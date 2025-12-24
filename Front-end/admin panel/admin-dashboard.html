@@ -88,7 +88,255 @@
     </div>
     <div class="relative flex h-screen w-full overflow-hidden z-10">
         <!-- Sidebar Navigation -->
-        <aside class="hidden md:flex flex-col w-72 h-full glass-panel-heavy border-r border-white/5 z-20 shrink-0">
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000/api';
+        const PUBLIC_URL = 'http://127.0.0.1:8000';
+    </script>
+    <script src="../js/admin_utils.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            renderAdminSidebar('dashboard');
+            loadStats();
+            loadUsers();
+        });
+
+        let ALL_ROLES = [];
+
+        async function fetchAllRoles() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/get_all_roles`, {
+                    headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+                });
+                const data = await response.json();
+                if(data.success) {
+                    ALL_ROLES = data.data;
+                }
+            } catch(e) { console.error("Failed to fetch roles", e); }
+        }
+
+        // Call this on init
+        document.addEventListener('DOMContentLoaded', () => {
+             // ... existing init ...
+             fetchAllRoles();
+        });
+
+        function openRoleModal(userId, currentRolesString) {
+            const modal = document.getElementById('role-modal');
+            const list = document.getElementById('role-list');
+            document.getElementById('role-user-id').value = userId;
+            
+            const currentRoles = currentRolesString.toLowerCase().split(',').map(r => r.trim());
+
+            list.innerHTML = ALL_ROLES.map(role => {
+                const isChecked = currentRoles.includes(role.name.toLowerCase());
+                return `
+                <label class="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/5 cursor-pointer transition-colors group">
+                    <span class="text-sm font-medium text-slate-300 group-hover:text-white">${role.name}</span>
+                    <input type="checkbox" name="roles" value="${role.name}" ${isChecked ? 'checked' : ''} 
+                        class="w-5 h-5 rounded border-slate-600 bg-slate-700 text-primary focus:ring-offset-0 focus:ring-0">
+                </label>
+                `;
+            }).join('');
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeRoleModal() {
+            document.getElementById('role-modal').classList.add('hidden');
+        }
+
+        async function submitRoles(e) {
+            e.preventDefault();
+            const userId = document.getElementById('role-user-id').value;
+            const checkboxes = document.querySelectorAll('input[name="roles"]:checked');
+            const selectedRoles = Array.from(checkboxes).map(cb => cb.value);
+
+            // If empty, maybe warn? or allow clearing roles (assigning empty array)
+            // But usually 'User' role is default. Let's just submit specific roles.
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/role/assign_role`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${ADMIN_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        role: selectedRoles // Array
+                    })
+                });
+                const data = await response.json();
+                
+                if(data.success) {
+                    closeRoleModal();
+                    loadUsers(); // Refresh table
+                    alert('Roles updated successfully');
+                } else {
+                    alert('Failed: ' + data.message);
+                }
+            } catch(e) {
+                console.error(e);
+                alert('Error updating roles');
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/stats`, {
+                    headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const stats = data.data;
+                    updateStatCard('total-users-count', stats.total_users);
+                    updateStatCard('new-users-count', stats.new_users_today, `+${stats.growth_percentage}% vs yesterday`);
+                    updateStatCard('banned-users-count', stats.banned_users);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function updateStatCard(id, value, subtext = '') {
+            const el = document.getElementById(id);
+            if(el) el.textContent = value;
+            // Optionally update subtext if I add IDs for them
+        }
+
+        async function loadUsers(page = 1) {
+            const tableBody = document.getElementById('user-table-body');
+            tableBody.innerHTML = `<tr><td colspan="5" class="px-6 py-20 text-center text-slate-500">Loading users...</td></tr>`;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/getallusers?page=${page}&limit=10`, {
+                    headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    renderUserTable(data.data.items);
+                    renderPagination(data.data.pagination);
+                }
+            } catch (e) {
+                console.error(e);
+                tableBody.innerHTML = `<tr><td colspan="5" class="px-6 py-20 text-center text-red-500">Error loading users.</td></tr>`;
+            }
+        }
+
+        async function banUser(userId, currentStatus) {
+            const action = currentStatus === 1 ? 'unban' : 'ban';
+            if(!confirm(`Are you sure you want to ${action} this user?`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/ban_user`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${ADMIN_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ user_id: userId, action: action })
+                });
+                const data = await response.json();
+                if(data.success) {
+                    // alert(`User ${action}ned successfully`);
+                    loadUsers(); // Refresh table
+                    loadStats(); // Refresh stats
+                } else {
+                    alert('Action failed: ' + data.message);
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        function renderUserTable(users) {
+            const tableBody = document.getElementById('user-table-body');
+            tableBody.innerHTML = '';
+
+            users.forEach(user => {
+                const roles = (user.roles || []).map(r => typeof r === 'object' ? r.name : r).join(', ');
+                const initials = (user.name || 'U')[0].toUpperCase();
+                const avatar = user.profile?.avatar 
+                    ? `${PUBLIC_URL}/${user.profile.avatar}` 
+                    : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=2d3748&color=fff`;
+                
+                const joinedDate = new Date(user.created_at).toLocaleDateString();
+
+                const isBanned = user.is_banned === 1;
+                const statusHtml = isBanned 
+                    ? `<span class="text-red-400 font-medium bg-red-500/10 px-2 py-1 rounded-md">Banned</span>`
+                    : `<span class="text-emerald-400 font-medium bg-emerald-500/10 px-2 py-1 rounded-md">Active</span>`;
+                
+                const banBtnTitle = isBanned ? "Unban User" : "Ban User";
+                const banBtnIcon = isBanned ? "check_circle" : "block"; 
+                const banBtnClass = isBanned ? "hover:bg-emerald-500/20 hover:text-emerald-400" : "hover:bg-red-500/20 hover:text-red-400";
+
+                tableBody.innerHTML += `
+                    <tr class="group hover:bg-white/[0.03] transition-colors">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <img src="${avatar}" class="size-10 rounded-full border border-white/10 object-cover bg-slate-700" 
+                                     onerror="this.src='https://ui-avatars.com/api/?name=${initials}&background=2d3748&color=fff'">
+                                <div class="flex flex-col">
+                                    <span class="font-semibold text-white">${user.name}</span>
+                                    <span class="text-slate-500 text-xs">${user.email}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${getRoleClass(roles)}">
+                                ${roles || 'User'}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            ${statusHtml}
+                        </td>
+                        <td class="px-6 py-4 text-slate-400">${joinedDate}</td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                                <button onclick="window.location.href='../profile.html?id=${user.id}'" class="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors" title="View Profile">
+                                    <span class="material-symbols-outlined text-[20px]">visibility</span>
+                                </button>
+                                <button onclick='openRoleModal(${user.id}, "${roles}")' class="p-2 rounded-lg hover:bg-blue-500/20 text-slate-400 hover:text-blue-400 transition-colors" title="Manage Roles">
+                                    <span class="material-symbols-outlined text-[20px]">shield_person</span>
+                                </button>
+                                <button onclick="banUser(${user.id}, ${user.is_banned || 0})" class="p-2 rounded-lg ${banBtnClass} text-slate-400 transition-colors" title="${banBtnTitle}">
+                                    <span class="material-symbols-outlined text-[20px]">${banBtnIcon}</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function getRoleClass(role) {
+            role = role.toLowerCase();
+            if (role.includes('admin')) return 'bg-amber-500/20 text-amber-300 border border-amber-500/20';
+            if (role.includes('moderator')) return 'bg-purple-500/20 text-purple-300 border border-purple-500/20';
+            return 'bg-blue-500/10 text-blue-300 border border-blue-500/10';
+        }
+
+        function renderPagination(pagination) {
+            const footer = document.getElementById('pagination-footer');
+            const { current_page, total_pages, total, from, to } = pagination;
+            
+            footer.innerHTML = `
+                <div class="text-sm text-slate-500">
+                    Showing <span class="text-white font-semibold">${from}-${to}</span> of <span class="text-white font-semibold">${total}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="loadUsers(${current_page - 1})" ${current_page === 1 ? 'disabled' : ''} 
+                            class="p-2 rounded-lg hover:bg-white/10 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        <span class="material-symbols-outlined text-[20px]">chevron_left</span>
+                    </button>
+                    <span class="text-white text-sm font-bold bg-primary px-3 py-1 rounded-lg">${current_page}</span>
+                    <button onclick="loadUsers(${current_page + 1})" ${current_page === total_pages ? 'disabled' : ''}
+                            class="p-2 rounded-lg hover:bg-white/10 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        <span class="material-symbols-outlined text-[20px]">chevron_right</span>
+                    </button>
+                </div>
+            `;
+        }
+    </script>
+        <aside id="admin-sidebar" class="hidden md:flex flex-col w-72 h-full glass-panel-heavy border-r border-white/5 z-20 shrink-0">
             <!-- Brand / Profile Header -->
             <div class="p-6 border-b border-white/5">
                 <div class="flex items-center gap-4">
@@ -135,6 +383,12 @@
                     <span class="text-sm font-medium">Analytics</span>
                 </a>
                 <div class="mt-6 px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">System</div>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/15 text-primary border border-primary/10 transition-all">
+                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span> <span class="text-sm font-semibold">Dashboard</span>
+                </a>
+                <a href="admin-roles.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                    <span class="material-symbols-outlined">manage_accounts</span> <span class="text-sm font-medium">Roles & Permissions</span>
+                </a>
                 <a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all group"
                     href="#">
                     <span class="material-symbols-outlined group-hover:scale-110 transition-transform">settings</span>
@@ -207,7 +461,7 @@
                                     Total Users
                                 </div>
                                 <div>
-                                    <div class="text-3xl md:text-4xl font-bold text-white tracking-tight">12,450</div>
+                                    <div id="total-users-count" class="text-3xl md:text-4xl font-bold text-white tracking-tight">0</div>
                                     <div class="flex items-center gap-1 text-[#0bda62] text-sm font-semibold mt-1">
                                         <span class="material-symbols-outlined text-[16px]">trending_up</span>
                                         <span>+5% this week</span>
@@ -311,266 +565,40 @@
                                         <th class="px-6 py-4 text-right">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody class="text-sm divide-y divide-white/5">
-                                    <!-- Row 1 -->
-                                    <tr class="group hover:bg-white/[0.03] transition-colors">
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center gap-3">
-                                                <div class="size-10 rounded-full bg-cover bg-center border border-white/10"
-                                                    data-alt="Avatar of Alex Johnson"
-                                                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBfdEJeaMvg0awJb0FLE8lDTeTTj1K58V8W0q6N2ooCSPlNTnsSBWc04oq-m2WIGVC7QP_QrgCMaqHIMa9Qxt0T6ID2IHjpGaR3knzmO94jcHSL-qwOFNmOy_zal0HpeCdLJaW1glPZx9LfLEXxvjNW9ZpKA2NQkfhXN14M7EVElmUKQDjJoTNvkT4g_bTtB2UmqXSTS35VBpexPM6SXsIBqQZEeFWKgHcN23ha7ywV_vvWnkmowXPU8To9QJqvPvsjC1qF-sZc5KI");'>
-                                                </div>
-                                                <div class="flex flex-col">
-                                                    <span class="font-semibold text-white">Alex Johnson</span>
-                                                    <span class="text-slate-500 text-xs">alex.j@example.com</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span
-                                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/20">
-                                                <span class="size-1.5 rounded-full bg-purple-400 animate-pulse"></span>
-                                                Moderator
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span class="text-emerald-400 font-medium">Active</span>
-                                        </td>
-                                        <td class="px-6 py-4 text-slate-400">
-                                            Oct 24, 2023
-                                        </td>
-                                        <td class="px-6 py-4 text-right">
-                                            <div
-                                                class="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                <button
-                                                    class="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
-                                                    title="Edit User">
-                                                    <span class="material-symbols-outlined text-[20px]">edit</span>
-                                                </button>
-                                                <button
-                                                    class="p-2 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors"
-                                                    title="Ban User">
-                                                    <span class="material-symbols-outlined text-[20px]">block</span>
-                                                </button>
-                                                <button
-                                                    class="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
-                                                    title="More Options">
-                                                    <span class="material-symbols-outlined text-[20px]">more_vert</span>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <!-- Row 2 -->
-                                    <tr class="group hover:bg-white/[0.03] transition-colors">
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center gap-3">
-                                                <div class="size-10 rounded-full bg-cover bg-center border border-white/10"
-                                                    data-alt="Avatar of Sarah Smith"
-                                                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBWNXm6UQ-YljLShAKv-vrulpqwMv6La9Gxm4EhYWg2Ar4G3iRI0a1_DlrA_d7t8dnAr2eBUPStoOKKy0KX4xRTgXQEeJjb5CFM5epyjWIYE7s5WdwwBA6CHuoRRHTj5nfh4ljVvsxy8uJyIyKdY6FH8zD3AtT6IoopX0szUP3oE576CEhqrObu6bfGhb9ueWyG4JheN-4NnPvMU2gUy3mgNjzOO0dzGMdayyNrnX7lKFo5Qt3KTUkRwkde-Qm4XH0NI389DeaHSpU");'>
-                                                </div>
-                                                <div class="flex flex-col">
-                                                    <span class="font-semibold text-white">Sarah Smith</span>
-                                                    <span class="text-slate-500 text-xs">sarah.s@example.com</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span
-                                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/20">
-                                                Admin
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span class="text-emerald-400 font-medium">Active</span>
-                                        </td>
-                                        <td class="px-6 py-4 text-slate-400">
-                                            Sep 12, 2023
-                                        </td>
-                                        <td class="px-6 py-4 text-right">
-                                            <div
-                                                class="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                <button
-                                                    class="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors">
-                                                    <span class="material-symbols-outlined text-[20px]">edit</span>
-                                                </button>
-                                                <button
-                                                    class="p-2 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors">
-                                                    <span class="material-symbols-outlined text-[20px]">block</span>
-                                                </button>
-                                                <button
-                                                    class="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors">
-                                                    <span class="material-symbols-outlined text-[20px]">more_vert</span>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <!-- Row 3 -->
-                                    <tr class="group hover:bg-white/[0.03] transition-colors">
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center gap-3">
-                                                <div class="size-10 rounded-full bg-cover bg-center border border-white/10"
-                                                    data-alt="Avatar of Michael Chen"
-                                                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB3ePq9xcsrjVLmmyMsWOjSlrK-fjhbOcfteT1wRbVUfANllXaiCATIYFTY__rIIHX6KA939tJVvrkD7w_kH7TAPrIpdGHxrWyjAB5cn87d4CwoRUqMZTRgHSphyfr54xWuFnVQkEIrcNl4JoPPv7rC1zZRIDdDYW9fUYf5O0UeS-ndlF-l4ZC6NQYjtS4Hl0WTa8WuRxUSdmtDVrfYg3H1Q2_blxJ_BJO5hA3ZH-C5IdL0jEeXlIMdXkKJjVrZoOpHc_4OWWNMLrY");'>
-                                                </div>
-                                                <div class="flex flex-col">
-                                                    <span class="font-semibold text-white">Michael Chen</span>
-                                                    <span class="text-slate-500 text-xs">m.chen@example.com</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span
-                                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-300 border border-blue-500/10">
-                                                User
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span class="text-slate-400 font-medium">Offline</span>
-                                        </td>
-                                        <td class="px-6 py-4 text-slate-400">
-                                            Nov 01, 2023
-                                        </td>
-                                        <td class="px-6 py-4 text-right">
-                                            <div
-                                                class="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                <button
-                                                    class="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors">
-                                                    <span class="material-symbols-outlined text-[20px]">edit</span>
-                                                </button>
-                                                <button
-                                                    class="p-2 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors">
-                                                    <span class="material-symbols-outlined text-[20px]">block</span>
-                                                </button>
-                                                <button
-                                                    class="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors">
-                                                    <span class="material-symbols-outlined text-[20px]">more_vert</span>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <!-- Row 4 -->
-                                    <tr class="group hover:bg-white/[0.03] transition-colors">
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center gap-3">
-                                                <div class="size-10 rounded-full bg-cover bg-center border border-white/10 opacity-70 grayscale"
-                                                    data-alt="Avatar of Emily Davis"
-                                                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBklcr0k_8Z_i8wSk_OInhaDctq0gnmRDvsROqbdaa0_nYV2C51V7fs17EwCgXvv5XvkLufDI0b1Lh_YoFq7Vob9aFudtkVrmzxlO6TO6KMWMWSC4BguUvHOwzv0CNCVTnlQIBFB-Cgvj95NMzoF1cN1dI_OofQMGR98JJKGUhfsdlsE-xRD48m_JM9wI4Vr2GP0xHT2NmboQFsZZxNXdH59yc9-pVaYBHlr2lTtkJrY58jghrG207v1g1XwvtPxCVjrxsS4ZxA14U");'>
-                                                </div>
-                                                <div class="flex flex-col opacity-70">
-                                                    <span class="font-semibold text-white">Emily Davis</span>
-                                                    <span class="text-slate-500 text-xs">emily.d@example.com</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span
-                                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-300 border border-blue-500/10 opacity-70">
-                                                User
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span
-                                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-red-500/20 text-red-400 uppercase tracking-wide">
-                                                Banned
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4 text-slate-400 opacity-70">
-                                            Aug 15, 2023
-                                        </td>
-                                        <td class="px-6 py-4 text-right">
-                                            <div
-                                                class="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                <button
-                                                    class="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors">
-                                                    <span class="material-symbols-outlined text-[20px]">edit</span>
-                                                </button>
-                                                <button
-                                                    class="p-2 rounded-lg hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 transition-colors"
-                                                    title="Unban User">
-                                                    <span
-                                                        class="material-symbols-outlined text-[20px]">check_circle</span>
-                                                </button>
-                                                <button
-                                                    class="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors">
-                                                    <span class="material-symbols-outlined text-[20px]">more_vert</span>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <!-- Row 5 -->
-                                    <tr class="group hover:bg-white/[0.03] transition-colors border-b-0">
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center gap-3">
-                                                <div class="size-10 rounded-full bg-cover bg-center border border-white/10"
-                                                    data-alt="Avatar of James Wilson"
-                                                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBKa1x_9e4r_KwcRvgnStVwTOYjCXQOksYlGyWs5_R7-llJMRxTxzyPBqDby86Xoqb762-ahFYdAvMTXmiLH57sYd2QwRQLJKmXzw-_ebcJ7PMnEquXp2iltpqSj5EThLTut5S2_iM4LcRsApz8AR0q_wlI28sJIr8JW500mP9hpPkJ5ApA4fhyn0201A3ec0x8JL-HpmMN2DyhNXFpAhStPBE6uC4NRQYub89CDadxuBnYZXLCCGpEdNJpirXVlGqM3pxTIJTy8ps");'>
-                                                </div>
-                                                <div class="flex flex-col">
-                                                    <span class="font-semibold text-white">James Wilson</span>
-                                                    <span class="text-slate-500 text-xs">j.wilson@example.com</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span
-                                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-300 border border-blue-500/10">
-                                                User
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span class="text-slate-400 font-medium">Offline</span>
-                                        </td>
-                                        <td class="px-6 py-4 text-slate-400">
-                                            Oct 10, 2023
-                                        </td>
-                                        <td class="px-6 py-4 text-right">
-                                            <div
-                                                class="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                <button
-                                                    class="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors">
-                                                    <span class="material-symbols-outlined text-[20px]">edit</span>
-                                                </button>
-                                                <button
-                                                    class="p-2 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors">
-                                                    <span class="material-symbols-outlined text-[20px]">block</span>
-                                                </button>
-                                                <button
-                                                    class="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors">
-                                                    <span class="material-symbols-outlined text-[20px]">more_vert</span>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                <tbody id="user-table-body" class="text-sm divide-y divide-white/5">
+                                    
                                 </tbody>
                             </table>
                         </div>
                         <!-- Pagination Footer -->
-                        <div class="flex items-center justify-between p-4 border-t border-white/5 bg-white/[0.02]">
-                            <div class="text-sm text-slate-500">
-                                Showing <span class="text-white font-semibold">1-5</span> of <span
-                                    class="text-white font-semibold">12,450</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <button
-                                    class="p-2 rounded-lg hover:bg-white/10 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed">
-                                    <span class="material-symbols-outlined text-[20px]">chevron_left</span>
-                                </button>
-                                <button
-                                    class="px-3 py-1 rounded-lg bg-primary text-white text-sm font-bold shadow-lg shadow-primary/30">1</button>
-                                <button
-                                    class="px-3 py-1 rounded-lg hover:bg-white/10 text-slate-400 text-sm font-medium transition-colors">2</button>
-                                <button
-                                    class="px-3 py-1 rounded-lg hover:bg-white/10 text-slate-400 text-sm font-medium transition-colors">3</button>
-                                <span class="text-slate-500 px-1">...</span>
-                                <button class="p-2 rounded-lg hover:bg-white/10 text-slate-400 transition-colors">
-                                    <span class="material-symbols-outlined text-[20px]">chevron_right</span>
-                                </button>
-                            </div>
+                        <div id="pagination-footer" class="flex items-center justify-between p-4 border-t border-white/5 bg-white/[0.02]">
+                            
                         </div>
                     </div>
                 </div>
             </div>
         </main>
+        
+        <!-- Role Management Modal -->
+        <div id="role-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeRoleModal()"></div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-[#1e2330] border border-white/10 rounded-2xl shadow-2xl p-6">
+                <h3 class="text-xl font-bold text-white mb-2">Manage Roles</h3>
+                <p class="text-sm text-slate-400 mb-6">Select roles to assign to this user.</p>
+                
+                <form id="role-form" onsubmit="submitRoles(event)">
+                    <input type="hidden" id="role-user-id">
+                    <div id="role-list" class="space-y-3 mb-6 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                        <!-- Roles injected here -->
+                    </div>
+                    
+                    <div class="flex gap-3 justify-end">
+                        <button type="button" onclick="closeRoleModal()" class="px-4 py-2 rounded-xl text-slate-400 hover:bg-white/5 transition-colors text-sm font-semibold">Cancel</button>
+                        <button type="submit" class="px-4 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </body>
 

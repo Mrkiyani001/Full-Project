@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Attachments;
 use App\Models\CommentReply;
+use App\Models\Comments;
+use App\Models\Post;
 use Illuminate\Http\Request;
 use App\Jobs\AddCommentReply;
 use App\Jobs\UpdateCommentReply;
 use App\Jobs\DeleteCommentReply;
+use App\Jobs\SendNotification;
 
 class CommentsRepliesController extends BaseController
 {
@@ -40,6 +43,22 @@ class CommentsRepliesController extends BaseController
                 $request->reply,
                 $uploadFiles
             );
+
+            // Notification Logic: Notify Post Owner
+            $comment = Comments::find($request->comment_id);
+            if ($comment) {
+                $post = Post::find($comment->post_id);
+                if ($post && $post->user_id != $user->id) {
+                    SendNotification::dispatch(
+                        $user->id,
+                        'New Reply',
+                        $user->name . ' replied to a comment on your post.',
+                        $post->user_id,
+                        $post,
+                        'N'
+                    );
+                }
+            }
 
             return response()->json([
                 'success' => true,
@@ -75,7 +94,7 @@ class CommentsRepliesController extends BaseController
                     'message' => 'Comment Reply not found',
                 ], 404);
             }
-            if($commentReply->user_id != $user->id){
+            if ($commentReply->user_id != $user->id) {
                 return $this->unauthorized();
             }
 
@@ -127,16 +146,16 @@ class CommentsRepliesController extends BaseController
                 return $this->unauthorized();
             }
             $commentReply = CommentReply::find($request->id);
-            if(!$commentReply){
+            if (!$commentReply) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Comment Reply not found',
                 ], 404);
             }
-            if($commentReply->user_id != $user->id){
+            if ($commentReply->user_id != $user->id) {
                 return $this->unauthorized();
             }
-            
+
             DeleteCommentReply::dispatch(
                 $user->id,
                 $request->id
@@ -167,7 +186,7 @@ class CommentsRepliesController extends BaseController
             $commentReplies = CommentReply::with('attachments', 'creator', 'updator', 'user', 'comment')
                 ->where('comment_id', $request->comment_id)
                 ->paginate($limit);
-            
+
             $data = $this->paginateData($commentReplies, $commentReplies->items());
             return response()->json([
                 'success' => true,

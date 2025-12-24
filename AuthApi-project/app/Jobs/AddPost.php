@@ -19,15 +19,17 @@ class AddPost implements ShouldQueue
     public $title;
     public $body;
     public $attachments;
+    public $is_approved;
     /**
      * Create a new job instance.
      */
-    public function __construct($user_id, $title, $body, $attachments = [])
+    public function __construct($user_id, $title, $body, $attachments = [], $is_approved = false)
     {
         $this->user_id = $user_id;
         $this->title = $title;
         $this->body = $body;
         $this->attachments = $attachments;
+        $this->is_approved = $is_approved;
     }
 
     /**
@@ -35,19 +37,28 @@ class AddPost implements ShouldQueue
      */
     public function handle(ModerationService $moderationService): void
     {
-        $post = Post::create([
+        $postData = [
             'user_id' => $this->user_id,
             'title' => $this->title,
             'body' => $this->body,
             'created_by' => $this->user_id,
             'updated_by' => $this->user_id,
-        ]);
+        ];
 
-        // Run Moderation Logic
-        try {
-            $moderationService->moderate($post, $this->body);
-        } catch (\Exception $e) {
-            Log::error("Moderation Failed for Post ID {$post->id}: " . $e->getMessage());
+        if ($this->is_approved) {
+            $postData['status'] = 1; // Approved
+            // $postData['is_published'] = 1; // Uncomment if column exists
+        }
+
+        $post = Post::create($postData);
+
+        // Run Moderation Logic only if NOT approved
+        if (!$this->is_approved) {
+            try {
+                $moderationService->moderate($post, $this->body);
+            } catch (\Exception $e) {
+                Log::error("Moderation Failed for Post ID {$post->id}: " . $e->getMessage());
+            }
         }
 
         if (empty($this->attachments)) return;

@@ -25,7 +25,7 @@ class ProfileController extends BaseController
             }
 
             // User data ka sath Profile, Followers, or Following load kro
-            $user = User::with(['profile', 'followers', 'following'])
+            $user = User::with(['profile.avatar', 'followers.profile.avatar', 'following.profile.avatar'])
                 ->withCount(['followers', 'following'])
                 ->find($userId);
 
@@ -53,7 +53,7 @@ class ProfileController extends BaseController
     {
         $this->validateRequest($request, [
             'name' => 'string|max:255',
-            'email' => 'email|max:255|unique:users,email,'. auth('api')->id(),
+            'email' => 'email|max:255|unique:users,email,' . auth('api')->id(),
             'show_email' => 'boolean',
             'bio' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
@@ -88,7 +88,7 @@ class ProfileController extends BaseController
             $user->save();
             $profileData = [];
             $fields = ['bio', 'phone', 'address', 'city', 'state', 'country', 'zip_code'];
-            
+
             foreach ($fields as $field) {
                 if ($request->filled($field)) {
                     $profileData[$field] = $request->$field;
@@ -106,31 +106,40 @@ class ProfileController extends BaseController
                 $attachment = Attachments::find($request->remove_avatar);
                 // Security check: ensure this attachment belongs to the user's profile
                 if ($attachment && $attachment->attachable_type === Profile::class && $attachment->attachable_id === $profile->id) {
-                     $this->deleteAttachment($attachment);
+                    $this->deleteAttachment($attachment);
                 }
             }
 
             // Handle Avatar Upload
             if ($request->hasFile('avatar')) {
-                // Delete old avatar if exists (Enforce One Avatar Rule)
+                // Delete old avatar if exists
                 if ($profile->avatar) {
                     $this->deleteAttachment($profile->avatar);
                 }
 
                 $file = $request->file('avatar');
                 $extension = $file->getClientOriginalExtension();
-                $filename = time() . '_'.uniqid() . '.' . $extension;
-                $path = 'profiles/avatars/'.$filename;
-                $file->move(public_path($path), $filename);
-                
+                $filename = time() . '_' . uniqid() . '.' . $extension;
+
+                // Ensure directory exists
+                $folderPath = public_path('profiles/avatars');
+                if (!file_exists($folderPath)) {
+                    mkdir($folderPath, 0777, true);
+                }
+
+                $file->move($folderPath, $filename);
+
+                // Path for DB (relative to public)
+                $dbPath = 'profiles/avatars/' . $filename;
+
                 // Create Attachment Record
                 $profile->avatar()->create([
-                    'file_path' => $path,
+                    'file_path' => $dbPath,
                     'file_name' => $filename,
                     'file_type' => 'image',
                 ]);
             }
-            
+
             // Reload with avatar
             $user->load('profile.avatar');
 
@@ -139,29 +148,33 @@ class ProfileController extends BaseController
             return $this->Response(false, $e->getMessage(), null, 500);
         }
     }
-    private function deleteAttachment($attachment) // Just a helper function to delete attachments
+
+    private function deleteAttachment($attachment)
     {
         if ($attachment) {
-            $oldPath = public_path($attachment->file_path . '/' . $attachment->file_name);
-            if (file_exists($oldPath)) {
-                unlink($oldPath);
+            // file_path already contains the full relative path including filename
+            $fullPath = public_path($attachment->file_path);
+
+            if (file_exists($fullPath)) {
+                unlink($fullPath);
             }
             $attachment->delete();
         }
     }
-    public function followUser(Request $request){
+    public function followUser(Request $request)
+    {
         $this->validateRequest($request, [
-                'user_id' => 'required|integer|exists:users,id',
-            ]);
+            'user_id' => 'required|integer|exists:users,id',
+        ]);
         try {
             $user = auth('api')->user();
             if (!$user) {
                 return $this->unauthorized();
             }
-            if($user->id == $request->user_id){
+            if ($user->id == $request->user_id) {
                 return $this->Response(false, 'You cannot follow yourself', null, 400);
             }
-            if($user->following()->where('following_id', $request->user_id)->exists()){
+            if ($user->following()->where('following_id', $request->user_id)->exists()) {
                 return $this->Response(false, 'You are already following this user', null, 400);
             }
 
@@ -169,11 +182,11 @@ class ProfileController extends BaseController
 
             // Notification Logic
             $followedUser = User::find($request->user_id);
-            if($followedUser){
-                 SendNotification::dispatch(
+            if ($followedUser) {
+                SendNotification::dispatch(
                     $user->id,
                     'New Follower',
-                    'User '.$user->id.' started following you.',
+                    $user->name . ' started following you.',
                     $followedUser->id,
                     $followedUser, // Notifiable is the User model
                     'N'
@@ -184,20 +197,21 @@ class ProfileController extends BaseController
             return $this->Response(false, $e->getMessage(), null, 500);
         }
     }
-    public function unfollowUser(Request $request){
+    public function unfollowUser(Request $request)
+    {
         $this->validateRequest($request, [
-                'user_id' => 'required|integer|exists:users,id',
-            ]);
+            'user_id' => 'required|integer|exists:users,id',
+        ]);
         try {
             $user = auth('api')->user();
-            if(!$user){
+            if (!$user) {
                 return $this->unauthorized();
             }
-            if($user->id == $request->id){
-                return $this->Response(false, 'You cannot follow yourself',null,400);
+            if ($user->id == $request->id) {
+                return $this->Response(false, 'You cannot follow yourself', null, 400);
             }
-            if(!$user->following()->where('following_id', $request->user_id)->exists()){
-                return $this->Response(false, 'You are not following this user',null,400);
+            if (!$user->following()->where('following_id', $request->user_id)->exists()) {
+                return $this->Response(false, 'You are not following this user', null, 400);
             }
             $user->unfollow($request->user_id);
             return $this->Response(true, 'User unfollowed successfully', null);
@@ -205,13 +219,14 @@ class ProfileController extends BaseController
             return $this->Response(false, $e->getMessage(), null, 500);
         }
     }
-    public function fetchFollower(Request $request){
+    public function fetchFollower(Request $request)
+    {
         $this->validateRequest($request, [
-                'user_id' => 'required|integer|exists:users,id',
-            ]);
+            'user_id' => 'required|integer|exists:users,id',
+        ]);
         try {
             $user = User::with('followers')->find($request->user_id);
-            if(!$user){
+            if (!$user) {
                 return $this->Response(false, 'User not found', null, 404);
             }
             return $this->Response(true, 'User followers retrieved successfully', $user->followers);
@@ -219,13 +234,14 @@ class ProfileController extends BaseController
             return $this->Response(false, $e->getMessage(), null, 500);
         }
     }
-    public function fetchFollowing(Request $request){
+    public function fetchFollowing(Request $request)
+    {
         $this->validateRequest($request, [
-                'user_id' => 'required|integer|exists:users,id',
-            ]);
+            'user_id' => 'required|integer|exists:users,id',
+        ]);
         try {
             $user = User::with('following')->find($request->user_id);
-            if(!$user){
+            if (!$user) {
                 return $this->Response(false, 'User not found', null, 404);
             }
             return $this->Response(true, 'User following retrieved successfully', $user->following);

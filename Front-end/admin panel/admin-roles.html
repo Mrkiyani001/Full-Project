@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Manage Roles & Permissions</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: { "primary": "#215bed", "background-light": "#f6f6f8", "background-dark": "#101522", "surface-dark": "#1e2330" },
+                    fontFamily: { "display": ["Plus Jakarta Sans", "sans-serif"] }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #101522; }
+        ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4a5568; }
+        .glass-panel { background: rgba(30, 35, 48, 0.4); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .permission-card { transition: all 0.2s; }
+        .permission-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white antialiased overflow-hidden">
+    
+    <script>
+        // Ensure these are globally available if utils needs them, 
+        // but if utils defines them, we shouldn't redeclare.
+        // Checking admin_utils.js: It uses them but doesn't seem to define them at top level?
+        // Actually, previous dashboard file defined them.
+        // Error was about ADMIN_TOKEN.
+        // Let's check admin_utils.js content from previous turn.
+        // admin_utils.js lines 6-7 define ADMIN_TOKEN.
+    </script>
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000/api';
+        const PUBLIC_URL = 'http://127.0.0.1:8000';
+    </script>
+    <script src="../js/admin_utils.js"></script>
+
+    <div class="relative flex h-screen w-full overflow-hidden">
+        <!-- Sidebar (Reused logic via JS or duplicated structure for now) -->
+        <aside id="admin-sidebar" class="hidden md:flex flex-col w-72 h-full glass-panel border-r border-white/5 z-20 shrink-0 bg-[#1e2330]">
+             <div class="p-6 border-b border-white/5">
+                <div class="flex items-center gap-3">
+                    <div class="bg-primary/20 p-2 rounded-lg"><span class="material-symbols-outlined text-primary">security</span></div>
+                    <div class="flex flex-col">
+                        <h1 class="text-white text-base font-bold">Admin Panel</h1>
+                        <p class="text-slate-400 text-xs">Role Manager</p>
+                    </div>
+                </div>
+            </div>
+            <nav class="flex-1 flex flex-col gap-2 p-4">
+                <a href="admin-dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                    <span class="material-symbols-outlined">dashboard</span> <span class="text-sm font-medium">Dashboard</span>
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/15 text-primary border border-primary/10 transition-all">
+                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">manage_accounts</span> <span class="text-sm font-semibold">Roles & Permissions</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col h-full bg-gradient-to-br from-background-dark to-[#0B0F19]">
+            
+            <header class="flex items-center justify-between p-6 border-b border-white/5 bg-[#1e2330]/50 backdrop-blur-md z-10">
+                <h2 class="text-2xl font-bold text-white">Roles & Permissions</h2>
+                <div class="flex gap-3">
+                     <button onclick="openCreatePermissionModal()" class="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-bold shadow-lg shadow-emerald-500/20">
+                        <span class="material-symbols-outlined text-[20px]">add_circle</span> Create Permission
+                    </button>
+                     <button onclick="openCreateRoleModal()" class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-bold shadow-lg shadow-blue-500/20">
+                        <span class="material-symbols-outlined text-[20px]">add</span> Create Role
+                    </button>
+                </div>
+            </header>
+
+            <div class="flex-1 flex overflow-hidden">
+                <!-- Roles List (Left) -->
+                <div class="w-72 border-r border-white/5 bg-[#1e2330]/30 flex flex-col">
+                    <div class="p-4 border-b border-white/5 text-xs font-bold text-slate-500 uppercase">Available Roles</div>
+                    <div id="roles-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+                        <!-- Role Items -->
+                        <div class="text-center text-slate-500 text-sm mt-10">Loading roles...</div>
+                    </div>
+                </div>
+
+                <!-- Permissions Grid (Right) -->
+                <div class="flex-1 flex flex-col relative">
+                    <div id="permissions-header" class="p-6 border-b border-white/5 flex justify-between items-center bg-[#1e2330]/30 hidden">
+                        <div>
+                            <h3 id="selected-role-name" class="text-xl font-bold text-white">Select a Role</h3>
+                            <p class="text-sm text-slate-400">Manage permissions for this role</p>
+                        </div>
+                        <button onclick="savePermissions()" class="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all font-bold shadow-lg shadow-emerald-500/20">
+                            <span class="material-symbols-outlined text-[20px]">save</span> Save Changes
+                        </button>
+                    </div>
+
+                    <div id="permissions-container" class="flex-1 overflow-y-auto p-6 relative">
+                        <!-- Empty State -->
+                        <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
+                            <span class="material-symbols-outlined text-[64px] mb-4 opacity-50">touch_app</span>
+                            <p>Select a role from the left to configure permissions.</p>
+                        </div>
+
+                        <!-- Permissions Grid -->
+                        <div id="permissions-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 hidden pb-20">
+                            <!-- Injected JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Create Role Modal -->
+    <div id="create-role-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeCreateRoleModal()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-[#1e2330] border border-white/10 rounded-2xl shadow-2xl p-6">
+            <h3 class="text-lg font-bold text-white mb-4">Create New Role</h3>
+            <input type="text" id="new-role-name" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-primary focus:ring-1 focus:ring-primary mb-4" placeholder="e.g. Content Editor">
+            <div class="flex gap-3 justify-end">
+                <button onclick="closeCreateRoleModal()" class="px-3 py-1.5 text-slate-400 hover:text-white text-sm">Cancel</button>
+                <button onclick="createRole()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600 text-sm font-bold">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Permission Modal -->
+    <div id="create-permission-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeCreatePermissionModal()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-[#1e2330] border border-white/10 rounded-2xl shadow-2xl p-6">
+            <h3 class="text-lg font-bold text-white mb-4">Create New Permission</h3>
+            <input type="text" id="new-permission-name" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 mb-4" placeholder="e.g. view analytics">
+            <div class="flex gap-3 justify-end">
+                <button onclick="closeCreatePermissionModal()" class="px-3 py-1.5 text-slate-400 hover:text-white text-sm">Cancel</button>
+                <button onclick="createPermission()" class="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 text-sm font-bold">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let rolesData = [];
+        let allPermissions = [];
+        let selectedRoleId = null;
+        // ADMIN_TOKEN is already defined in admin_utils.js
+
+        // Initial Load
+        document.addEventListener('DOMContentLoaded', async () => {
+             renderAdminSidebar('roles'); // Render sidebar with active state
+             if(!ADMIN_TOKEN) window.location.href = '../login.html';
+             await Promise.all([fetchRoles(), fetchPermissions()]);
+             renderRolesList();
+        });
+
+        async function fetchRoles() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/get_all_roles`, { headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` } });
+                const data = await res.json();
+                if(data.success) rolesData = data.data;
+            } catch(e) { console.error(e); }
+        }
+
+        async function fetchPermissions() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/get_all_permissions`, { headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` } });
+                const data = await res.json();
+                if(data.success) allPermissions = data.data;
+            } catch(e) { console.error(e); }
+        }
+
+        function renderRolesList() {
+            const container = document.getElementById('roles-list');
+            container.innerHTML = rolesData.map(role => `
+                <div onclick="selectRole(${role.id})" 
+                     class="role-item p-3 rounded-xl cursor-pointer hover:bg-white/5 transition-colors flex justify-between items-center group ${selectedRoleId === role.id ? 'bg-primary/20 border border-primary/20' : 'border border-transparent'}">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-[20px] ${selectedRoleId === role.id ? 'text-primary' : 'text-slate-500'}">verified_user</span>
+                        <span class="text-sm font-semibold ${selectedRoleId === role.id ? 'text-white' : 'text-slate-300'}">${role.name}</span>
+                    </div>
+                    ${role.name.toLowerCase() !== 'super-admin' ? `
+                    <button onclick="deleteRole(event, ${role.id})" class="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                    </button>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function selectRole(id) {
+            selectedRoleId = id;
+            const role = rolesData.find(r => r.id === id);
+            if(!role) return;
+
+            renderRolesList(); // Re-render to update active state
+
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('permissions-header').classList.remove('hidden');
+            document.getElementById('permissions-grid').classList.remove('hidden');
+            document.getElementById('selected-role-name').textContent = role.name;
+
+            renderPermissionsGrid(role);
+        }
+
+        function renderPermissionsGrid(role) {
+            const container = document.getElementById('permissions-grid');
+            const rolePerms = role.permissions.map(p => p.name);
+
+            container.innerHTML = allPermissions.map(perm => {
+                const isChecked = rolePerms.includes(perm.name);
+                return `
+                <label class="permission-card bg-[#1e2330] p-4 rounded-xl border border-white/5 cursor-pointer flex items-start gap-3 relative overflow-hidden group">
+                    <div class="absolute inset-0 bg-primary/0 group-hover:bg-primary/5 transition-colors"></div>
+                    <input type="checkbox" name="permission" value="${perm.name}" ${isChecked ? 'checked' : ''} 
+                           class="mt-1 w-5 h-5 rounded border-slate-600 bg-slate-700 text-primary focus:ring-offset-0 focus:ring-0 z-10">
+                    <div class="z-10 flex-1">
+                        <div class="text-sm font-bold text-slate-200 group-hover:text-white transition-colors">${perm.name}</div>
+                        <div class="text-[10px] text-slate-500 mt-0.5">Allow access to ${perm.name}</div>
+                    </div>
+                     <button onclick="deletePermission(event, '${perm.name}')" class="z-20 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" title="Delete Permission">
+                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                </label>
+                `;
+            }).join('');
+        }
+
+        async function savePermissions() {
+            if(!selectedRoleId) return;
+            const checkboxes = document.querySelectorAll('input[name="permission"]:checked');
+            const selectedPerms = Array.from(checkboxes).map(cb => cb.value);
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/role/assign_role_permissions`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role_id: selectedRoleId, permissions: selectedPerms })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    alert('Permissions Saved!');
+                    // Update local data
+                    const roleIdx = rolesData.findIndex(r => r.id === selectedRoleId);
+                    if(roleIdx > -1) {
+                         // We need to refetch to get clean objects or mock it.
+                         await fetchRoles(); // Easiest ensures sync
+                         renderRolesList();
+                    }
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        function openCreateRoleModal() { document.getElementById('create-role-modal').classList.remove('hidden'); }
+        function closeCreateRoleModal() { document.getElementById('create-role-modal').classList.add('hidden'); }
+
+        async function createRole() {
+            const name = document.getElementById('new-role-name').value;
+            if(!name) return;
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/role/create_role`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, permissions: [] }) // Start empty
+                });
+                const data = await res.json();
+                if(data.success) {
+                    closeCreateRoleModal();
+                    await fetchRoles(); // Refresh list
+                    renderRolesList();
+                    document.getElementById('new-role-name').value = '';
+                } else {
+                    alert(data.message);
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function deleteRole(e, id) {
+            e.stopPropagation();
+            if(!confirm('Are you sure? This cannot be undone.')) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/role/delete_role`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                });
+                const data = await res.json();
+                if(data.success) {
+                     if(selectedRoleId === id) {
+                        selectedRoleId = null;
+                        document.getElementById('empty-state').classList.remove('hidden');
+                        document.getElementById('permissions-header').classList.add('hidden');
+                        document.getElementById('permissions-grid').classList.add('hidden');
+                     }
+                     await fetchRoles();
+                     renderRolesList();
+                } else {
+                    alert(data.message);
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        function openCreatePermissionModal() { document.getElementById('create-permission-modal').classList.remove('hidden'); }
+        function closeCreatePermissionModal() { document.getElementById('create-permission-modal').classList.add('hidden'); }
+
+        async function createPermission() {
+            const name = document.getElementById('new-permission-name').value;
+            if(!name) return;
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/role/create_permission`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    closeCreatePermissionModal();
+                    await fetchPermissions(); 
+                    if(selectedRoleId) { // Re-render grid if open
+                         const role = rolesData.find(r => r.id === selectedRoleId);
+                         if(role) renderPermissionsGrid(role);
+                    }
+                    document.getElementById('new-permission-name').value = '';
+                } else {
+                    alert(data.message); 
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function deletePermission(e, name) {
+            e.preventDefault(); e.stopPropagation();
+            if(!confirm(`Delete permission "${name}"? This will remove it from ALL roles.`)) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/role/delete_permission`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name })
+                });
+                const data = await res.json();
+                if(data.success) {
+                     await fetchPermissions();
+                     if(selectedRoleId) {
+                         const role = rolesData.find(r => r.id === selectedRoleId);
+                         if(role) renderPermissionsGrid(role);
+                     }
+                } else {
+                    alert(data.message);
+                }
+            } catch(e) { console.error(e); }
+        }
+    </script>
+</body>
+</html>

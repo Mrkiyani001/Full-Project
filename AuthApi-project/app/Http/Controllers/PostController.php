@@ -41,16 +41,22 @@ class PostController extends BaseController
                     }
                 }
             }
+            $is_approved = false;
+            if ($user->hasRole(['admin', 'super admin', 'moderator'])) {
+                $is_approved = true;
+            }
+
             AddPost::dispatch(
                 $user->id,
                 $request->title,
                 $request->body,
-                $attachments
+                $attachments,
+                $is_approved
             );
             SendNotification::dispatch(
                 $user->id,
                 'New Post',
-                'User ' . $user->id . ' created a new post.',
+                $user->name . ' created a new post.',
                 $user->id,
                 $user, // Notifiable is the User model
                 'Y'
@@ -191,7 +197,7 @@ class PostController extends BaseController
                     'message' => 'Post not found',
                 ], 404);
             } else {
-                $post->load('attachments', 'creator', 'updator', 'user');
+                $post->load('attachments', 'creator', 'updator', 'user.profile.avatar');
                 return response()->json([
                     'success' => true,
                     'data' => $post,
@@ -212,7 +218,7 @@ class PostController extends BaseController
             if (!$user) {
                 return $this->unauthorized();
             }
-            $posts = Post::with('attachments', 'creator', 'updator', 'user')
+            $posts = Post::with('attachments', 'creator', 'updator', 'user.profile.avatar')
                 ->withExists(['reactions as is_liked' => function ($q) use ($user) {
                     $q->where('created_by', $user->id)->where('type', 1);
                 }])
@@ -242,7 +248,7 @@ class PostController extends BaseController
             if (!$user) {
                 return $this->unauthorized();
             }
-            $posts = Post::pending()->with('attachments', 'creator', 'updator', 'user')->get();
+            $posts = Post::pending()->with('attachments', 'creator', 'updator', 'user.profile.avatar')->get();
             return response()->json([
                 'success' => true,
                 'data' => $posts,
@@ -340,7 +346,7 @@ class PostController extends BaseController
                 // My Profile: Show ALL posts (Pending, Approved, Rejected)
                 $posts = Post::withoutGlobalScopes()
                     ->where('user_id', $request->user_id)
-                    ->with('attachments', 'creator', 'updator', 'user')
+                    ->with('attachments', 'creator', 'updator', 'user.profile.avatar')
                     ->withExists(['reactions as is_liked' => function ($q) use ($user) {
                         $q->where('created_by', $user->id)->where('type', 1);
                     }])
@@ -356,13 +362,54 @@ class PostController extends BaseController
                 $posts = Post::withoutGlobalScopes()
                     ->where('user_id', $request->user_id)
                     ->where('status', 1) // 1 = Approved
-                    ->with('attachments', 'creator', 'updator', 'user')
+                    ->with('attachments', 'creator', 'updator', 'user.profile.avatar')
                     ->withExists(['reactions as is_liked' => function ($q) use ($user) {
                         $q->where('created_by', $user->id)->where('type', 1);
                     }])
                     ->orderby('created_at', 'desc')
                     ->paginate($limit);
             }
+
+            $data = $this->paginateData($posts, $posts->items());
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function get_liked_posts(Request $request)
+    {
+        $this->validateRequest($request, [
+            'user_id' => 'required|integer|exists:users,id',
+        ]);
+
+        try {
+            $user = auth('api')->user();
+            if (!$user) {
+                return $this->unauthorized();
+            }
+            $limit = (int) $request->input('limit', 10);
+
+            $posts = Post::whereHas('reactions', function ($q) use ($request) {
+                $q->where('created_by', $request->user_id)->where('type', 1);
+            })
+                ->where('status', 1) // Only approved posts
+                ->with('attachments', 'creator', 'updator', 'user.profile.avatar')
+                ->withExists(['reactions as is_liked' => function ($q) use ($user) {
+                    $q->where('created_by', $user->id)->where('type', 1);
+                }])
+                ->withCount(['reactions as like_count' => function ($q) {
+                    $q->where('type', 1);
+                }])
+                ->withCount('comments')
+                ->orderby('created_at', 'desc')
+                ->paginate($limit);
 
             $data = $this->paginateData($posts, $posts->items());
             return response()->json([

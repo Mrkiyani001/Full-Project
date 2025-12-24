@@ -1,0 +1,843 @@
+
+// Post Interaction Utilities
+// Requires: API_BASE_URL, token, PUBLIC_URL, currentUserData (or userData) to be defined globally
+
+const DEFAULT_AVATAR = (name) => `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=random`;
+
+function getAvatarUrl(user) {
+    if (user && user.profile && user.profile.avatar && user.profile.avatar.file_path) {
+        let path = user.profile.avatar.file_path;
+        if (path.startsWith('/')) path = path.substring(1);
+        if (path.startsWith('http')) return path;
+        return `${PUBLIC_URL}/${path}`;
+    }
+    // Handle case where user is flat object with avatar_url or similar if API inconsistency exists (fallback)
+    if(user && user.avatar_url) return user.avatar_url; 
+    return null; // Return null to indicate no custom avatar
+}
+
+/**
+ * Renders an <img> tag for the user's avatar with a fallback to initials on error or if missing.
+ * @param {Object} user User object
+ * @param {String} classes CSS classes for the img tag
+ * @param {String} extraAttrs Extra attributes like onclick
+ */
+function renderAvatarHTML(user, classes = "size-10 rounded-full object-cover border border-white/10", extraAttrs = "") {
+    const name = user ? user.name : 'User';
+    const initialsUrl = DEFAULT_AVATAR(name);
+    const avatarUrl = getAvatarUrl(user);
+
+    // If we have an avatar URL, try loading it, with initials as onerror fallback
+    if (avatarUrl) {
+        return `<img src="${avatarUrl}" class="${classes} bg-slate-700" ${extraAttrs} onerror="this.onerror=null; this.src='${initialsUrl}';">`;
+    }
+
+    // If no avatar URL, use initials directly
+    return `<img src="${initialsUrl}" class="${classes} bg-slate-700" ${extraAttrs}>`;
+}
+
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-6 right-6 px-6 py-4 rounded-xl backdrop-blur-md shadow-2xl transform transition-all duration-500 translate-y-20 opacity-0 z-50 flex items-center gap-3 border ${type === 'success' ? 'bg-black/60 border-green-500/30' : 'bg-black/60 border-red-500/30'}`;
+    toast.innerHTML = `
+        <span class="material-symbols-outlined ${type === 'success' ? 'text-green-400' : 'text-red-400'}">
+            ${type === 'success' ? 'check_circle' : 'error'}
+        </span>
+        <span class="text-white font-medium text-sm">${message}</span>
+    `;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.remove('translate-y-20', 'opacity-0'));
+    setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
+}
+
+// Global Search Logic
+async function setupGlobalSearch() {
+    const searchInput = document.getElementById('global-search-input');
+    if (!searchInput) return;
+
+    // Create dropdown container if not exists
+    let dropdown = document.getElementById('global-search-dropdown');
+    if (!dropdown) {
+        dropdown = document.createElement('div');
+        dropdown.id = 'global-search-dropdown';
+        dropdown.className = 'absolute top-full left-0 w-full mt-2 bg-[#1c1f27] border border-white/10 rounded-xl shadow-2xl hidden z-50 overflow-hidden';
+        searchInput.parentElement.appendChild(dropdown);
+        searchInput.parentElement.style.position = 'relative'; // Ensure proper positioning
+    }
+
+    let debounceTimer;
+
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        clearTimeout(debounceTimer);
+
+        if (query.length === 0) {
+            dropdown.classList.add('hidden');
+            dropdown.innerHTML = '';
+            return;
+        }
+
+        debounceTimer = setTimeout(async () => {
+            dropdown.innerHTML = '<div class="p-4 text-center text-slate-400 text-sm">Searching...</div>';
+            dropdown.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/search_user`, {
+                     method: 'POST',
+                     headers: {
+                         'Authorization': `Bearer ${token}`,
+                         'Content-Type': 'application/json'
+                     },
+                     body: JSON.stringify({ search: query, limit: 5 })
+                });
+                const data = await response.json();
+
+                if (data.success && data.data && data.data.items && data.data.items.length > 0) {
+                    dropdown.innerHTML = data.data.items.map(user => `
+                        <div class="flex items-center gap-3 p-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5 last:border-0" onclick="window.location.href='profile.html?id=${user.id}'">
+                             ${renderAvatarHTML(user, "w-10 h-10 rounded-full border border-white/10 object-cover")}
+                             <div>
+                                 <h4 class="text-white font-bold text-sm">${user.name}</h4>
+                                 <p class="text-xs text-secondary-text">@${user.name.replace(/\s+/g, '').toLowerCase()}</p>
+                             </div>
+                        </div>
+                    `).join('');
+                } else {
+                    dropdown.innerHTML = '<div class="p-4 text-center text-slate-400 text-sm">No users found.</div>';
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                dropdown.innerHTML = '<div class="p-4 text-center text-red-400 text-sm">Error searching.</div>';
+            }
+        }, 300); // 300ms debounce
+    });
+
+    // Close on click outside
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+    
+    // Header Avatar Init (Standardizing here too to fix black image globally)
+    const headerAvatar = document.getElementById('header-user-avatar') || document.getElementById('nav-avatar');
+    if(headerAvatar && typeof currentUserData !== 'undefined') {
+        const url = getAvatarUrl(currentUserData);
+        if (url) headerAvatar.src = url;
+    }
+}
+
+/**
+ * Checks if current user has admin/moderator roles and renders a link to the admin panel.
+ */
+function checkAndRenderAdminLink() {
+    const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
+    if (!userData || !userData.roles) return;
+
+    // Handle both array of objects (from API) and array of strings (from login response)
+    const roles = userData.roles.map(r => (typeof r === 'object' ? r.name : r).toLowerCase());
+    
+    // Check for common admin/moderator roles
+    const hasAccess = roles.includes('admin') || 
+                      roles.includes('super admin') || 
+                      roles.includes('superadmin') || 
+                      roles.includes('moderator');
+
+    if (hasAccess) {
+        // Find header actions container - try multiple common selectors
+        const headerActions = document.querySelector('header .flex.items-center.justify-end') || 
+                            document.querySelector('header .flex.items-center.gap-4') ||
+                            document.querySelector('header .flex.items-center.gap-3');
+                            
+        if (headerActions) {
+            // Check if link already exists
+            if (document.getElementById('admin-portal-link')) return;
+
+            const adminLink = document.createElement('a');
+            adminLink.id = 'admin-portal-link';
+            adminLink.href = 'admin%20panel/admin-dashboard.html';
+            adminLink.className = 'w-9 h-9 md:w-10 md:h-10 rounded-full bg-accent-purple/10 border border-accent-purple/20 flex items-center justify-center text-accent-purple hover:bg-accent-purple hover:text-white transition-all duration-300 group mr-1';
+            adminLink.title = 'Admin Portal';
+            adminLink.innerHTML = `
+                <span class="material-symbols-outlined text-[20px] md:text-[24px] group-hover:rotate-12 transition-transform">shield_person</span>
+            `;
+            
+            // Insert before profile container
+            const profile = headerActions.querySelector('.group\\/profile');
+            if (profile) headerActions.insertBefore(adminLink, profile);
+        }
+    }
+}
+
+// Multi-Account Service
+const MultiAccountService = {
+    STORAGE_KEY: 'saved_accounts',
+
+    getAccounts() {
+        try {
+            return JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '[]');
+        } catch {
+            return [];
+        }
+    },
+
+    saveCurrentAccount() {
+        const token = localStorage.getItem('auth_token');
+        const user = JSON.parse(localStorage.getItem('user_data') || '{}');
+        
+        if (!token || !user.id) return;
+
+        let accounts = this.getAccounts();
+        // Remove existing saved entry for this user to avoid dupes
+        accounts = accounts.filter(acc => acc.user.id !== user.id);
+        
+        // Add current
+        accounts.push({ token, user, last_active: new Date().getTime() });
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(accounts));
+    },
+
+    switchAccount(accountId) {
+        // Save current first
+        this.saveCurrentAccount();
+
+        const accounts = this.getAccounts();
+        const target = accounts.find(acc => acc.user.id == accountId);
+
+        if (target) {
+            // Remove target from saved list (it becomes active)
+            const remaining = accounts.filter(acc => acc.user.id !== target.user.id);
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(remaining));
+
+            // Set as active
+            localStorage.setItem('auth_token', target.token);
+            localStorage.setItem('user_data', JSON.stringify(target.user));
+            
+            // Reload
+            window.location.reload();
+        }
+    },
+
+    addAccount() {
+        this.saveCurrentAccount();
+        // Clear active session effectively
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+        window.location.href = 'login.html';
+    },
+    
+    logoutCurrent() {
+        // Just remove current, don't save it if user explicitly logs out? 
+        // Or should logout just mean "remove from active"? 
+        // Standard behavior: Logout removes access.
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+        window.location.href = 'login.html';
+    }
+};
+
+// Profile Dropdown Logic
+function toggleProfileDropdown() {
+    const dropdown = document.getElementById('profile-dropdown');
+    if (!dropdown) return;
+
+    // Render Dropdown Content dynamically
+    if (dropdown.classList.contains('hidden')) {
+        renderDropdownContent(dropdown);
+    }
+    
+    dropdown.classList.toggle('hidden');
+}
+
+function renderDropdownContent(container) {
+    const savedAccounts = MultiAccountService.getAccounts();
+    const currentUser = JSON.parse(localStorage.getItem('user_data') || '{}');
+
+    let accountsHtml = '';
+    if (savedAccounts.length > 0) {
+        accountsHtml = `
+            <div class="px-4 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Switch Accounts</div>
+            ${savedAccounts.map(acc => `
+                <div onclick="MultiAccountService.switchAccount(${acc.user.id})" 
+                     class="px-4 py-2 hover:bg-white/5 cursor-pointer flex items-center gap-3 transition-colors group">
+                    <img src="${getAvatarUrl(acc.user) || DEFAULT_AVATAR(acc.user.name)}" class="w-8 h-8 rounded-full border border-white/10 object-cover">
+                    <div class="flex-1 overflow-hidden">
+                        <div class="text-xs font-bold text-white truncate">${acc.user.name}</div>
+                        <div class="text-[10px] text-slate-500 truncate">@${acc.user.name.toLowerCase().replace(/\s+/g, '')}</div>
+                    </div>
+                </div>
+            `).join('')}
+            <div class="h-px bg-white/5 my-1"></div>
+        `;
+    }
+
+    // Role-based Admin Link
+    const roles = currentUser.roles ? currentUser.roles.map(r => (typeof r === 'object' ? r.name : r).toLowerCase()) : [];
+    const isAdmin = roles.some(r => ['admin', 'super admin', 'moderator'].includes(r));
+    const adminLinkHtml = isAdmin ? `
+        <a href="admin%20panel/admin-dashboard.html" class="block px-4 py-3 text-sm text-accent-purple hover:bg-accent-purple/10 transition-colors flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">shield_person</span>
+            Admin Portal
+        </a>
+    ` : '';
+
+    container.innerHTML = `
+        <div class="py-1">
+            <a href="profile.html" class="block px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">person</span>
+                View Profile
+            </a>
+            ${adminLinkHtml}
+            <div class="h-px bg-white/5 my-1"></div>
+            
+            ${accountsHtml}
+            
+            <button onclick="MultiAccountService.addAccount()" 
+                class="w-full text-left px-4 py-2 text-sm text-primary hover:bg-primary/10 transition-colors flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">person_add</span>
+                Add Account
+            </button>
+            
+            <div class="h-px bg-white/5 my-1"></div>
+            
+            <button onclick="MultiAccountService.logoutCurrent()" 
+                class="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">logout</span>
+                Logout
+            </button>
+        </div>
+    `;
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('profile-dropdown');
+    const profileTrigger = document.querySelector('.group\\/profile');
+    
+    if (dropdown && !dropdown.classList.contains('hidden')) {
+        if (!dropdown.contains(e.target) && !profileTrigger.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    }
+});
+
+// Init search and admin link on load
+document.addEventListener('DOMContentLoaded', () => {
+    setupGlobalSearch();
+    checkAndRenderAdminLink();
+});
+
+function createPostHTML(post) {
+    // Determine which user object to use (handle potential variations)
+    const user = post.user || { name: 'Unknown', id: 0 };
+    const avatarUrl = getAvatarUrl(user);
+    const timeAgo = new Date(post.created_at).toLocaleDateString();
+    
+    // Normalize self-reference for avatar in comments
+    const myName = (typeof currentUserData !== 'undefined' && currentUserData.name) ? currentUserData.name : 
+                   (typeof userData !== 'undefined' && userData.name) ? userData.name : 'Me';
+    const myAvatarUrl = getAvatarUrl(currentUserData || userData);
+
+    const isLiked = post.is_liked || false;
+    const likeColorClass = isLiked ? 'text-pink-500' : 'text-secondary-text';
+    const likeFill = isLiked ? 1 : 0;
+
+    let mediaHTML = '';
+    if (post.attachments && post.attachments.length > 0) {
+        const files = Array.isArray(post.attachments) ? post.attachments : [];
+        if (files.length > 0) {
+                const file = files[0];
+                let src = '';
+                if (typeof file === 'object' && file.file_path) src = `${PUBLIC_URL}/${file.file_path}`;
+                else if (typeof file === 'string') src = `${PUBLIC_URL}/posts/${file}`;
+                
+                if(src) {
+                    mediaHTML = `<div class="mt-4 rounded-xl overflow-hidden border border-white/10 h-64 relative group cursor-pointer">
+                    <div class="w-full h-full bg-cover bg-center" style="background-image: url('${src}')"></div>
+                    </div>`;
+                }
+        }
+    }
+
+    // Using glass-panel or glass-card depending on what CSS class is available or prefer consistency
+    // Profile uses 'glass-panel', Dashboard uses 'glass-card'. Let's standardise to a string that works for both or stick to one.
+    // Dashboard: glass-card rounded-3xl p-0
+    // Profile: glass-panel rounded-2xl shadow-xl p-0
+    // We'll use a generic set of classes that looks good.
+    const cardClass = "glass-panel rounded-2xl shadow-xl overflow-hidden p-0 transition-transform duration-300 hover:translate-y-[-2px] mb-6";
+
+    return `
+    <article class="${cardClass}">
+        <div class="p-6">
+            <div class="flex gap-4">
+                ${renderAvatarHTML(user, "size-10 rounded-full border border-white/10 cursor-pointer object-cover", `onclick="window.location.href='profile.html?id=${user.id}'"`)}
+                <div class="flex-1">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="text-white font-bold text-sm cursor-pointer hover:underline" onclick="window.location.href='profile.html?id=${user.id}'">${user.name}</h3>
+                            <div class="flex items-center gap-2 text-secondary-text text-sm mt-0.5">
+                                <span>@${user.name.replace(/\s+/g, '').toLowerCase()}</span>
+                                <span class="text-[8px] opacity-50">●</span>
+                                <span>${timeAgo}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cursor-pointer" onclick="window.location.href='post-detail-veiw.html?id=${post.id}'">
+                        ${post.body ? `<p class="text-slate-200 mt-2 text-sm leading-relaxed">${post.body}</p>` : ''}
+                        ${mediaHTML}
+                    </div>
+                    
+                    <div class="flex gap-6 mt-4 border-t border-white/5 pt-3">
+                            <div class="flex items-center gap-2">
+                                <button onclick="likePost(${post.id}, this)" class="flex items-center gap-2 text-xs font-semibold ${likeColorClass} hover:text-pink-500 transition-colors group/like">
+                                    <span class="material-symbols-outlined text-[18px] transition-transform group-active/like:scale-75" style="font-variation-settings: 'FILL' ${likeFill}">favorite</span>
+                                    <span>Like</span>
+                                </button>
+                                <span onclick="openUserListModal(${post.id}, 'post')" class="text-xs text-secondary-text hover:text-white cursor-pointer ml-1">${post.like_count > 0 ? post.like_count : ''}</span>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <button onclick="toggleCommentSection(${post.id})" class="flex items-center gap-2 text-secondary-text text-xs font-semibold hover:text-blue-500 transition-colors">
+                                    <span class="material-symbols-outlined text-[18px]">chat_bubble</span> Comment
+                                </button>
+                                <span class="text-xs text-secondary-text hover:text-white ml-1">${post.comments_count > 0 ? post.comments_count : ''}</span>
+                            </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inline Comment Section -->
+        <div id="comment-section-${post.id}" class="hidden px-6 pb-6 pt-2 border-t border-white/5 bg-black/20">
+            <div id="comment-list-${post.id}" class="flex flex-col gap-3 mb-4 max-h-60 overflow-y-auto pr-2 custom-scrollbar"></div>
+
+            <div class="flex gap-3 items-start">
+                    ${renderAvatarHTML(currentUserData || userData, "w-8 h-8 rounded-full border border-white/10 mt-1 object-cover")}
+                    <div class="flex-1">
+                    <textarea id="comment-input-${post.id}" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-slate-300 focus:outline-none focus:border-primary/50 transition-all resize-none h-20 placeholder:text-slate-500" placeholder="Write a comment..."></textarea>
+                    <div class="flex justify-end mt-2">
+                            <button onclick="submitComment(${post.id})" class="px-4 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1">
+                            <span>Post</span>
+                            <span class="material-symbols-outlined text-[14px]">send</span>
+                            </button>
+                    </div>
+                    </div>
+            </div>
+        </div>
+    </article>`;
+}
+
+async function toggleCommentSection(postId) {
+    const section = document.getElementById(`comment-section-${postId}`);
+    const list = document.getElementById(`comment-list-${postId}`);
+    
+    // Normalize self-reference for avatar in comments
+    const myName = (typeof currentUserData !== 'undefined' && currentUserData.name) ? currentUserData.name : 
+                   (typeof userData !== 'undefined' && userData.name) ? userData.name : 'Me';
+    
+    section.classList.toggle('hidden');
+    
+    if(!section.classList.contains('hidden')) {
+            setTimeout(() => {
+            const input = document.getElementById(`comment-input-${postId}`);
+            if(input) input.focus();
+            }, 50);
+            
+            // Fetch comments
+            list.innerHTML = '<div class="text-xs text-secondary-text text-center py-2">Loading comments...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/get_comment`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ post_id: postId, limit: 20 })
+                });
+                const data = await response.json();
+                
+                if(data.success && data.data && data.data.items.length > 0) {
+                    list.innerHTML = data.data.items.map(comment => {
+                        const user = comment.user || { name: 'Unknown', id: 0 };
+                        const isLiked = comment.is_liked || false;
+                        const likeCount = comment.like_count || 0;
+                        const likeColorClass = isLiked ? 'text-pink-500' : 'text-secondary-text';
+                        const likeFill = isLiked ? 1 : 0;
+
+                        // Render Replies
+                        let repliesHTML = '';
+                        if(comment.replies && comment.replies.length > 0) {
+                            repliesHTML = '<div class="mt-2 pl-8 flex flex-col gap-2 border-l border-white/10 ml-2">';
+                            repliesHTML += comment.replies.map(reply => {
+                                const replyUser = reply.creator || { name: 'Unknown', id: 0 };
+                                const replyIsLiked = reply.is_liked || false;
+                                const replyLikeCount = reply.like_count || 0;
+                                const rLikeColor = replyIsLiked ? 'text-pink-500' : 'text-secondary-text';
+                                const rLikeFill = replyIsLiked ? 1 : 0;
+                                
+                                return `
+                                <div class="flex gap-3 items-start animate-fade-in">
+                                    ${renderAvatarHTML(replyUser, "w-6 h-6 rounded-full border border-white/10 cursor-pointer object-cover", `onclick="window.location.href='profile.html?id=${replyUser.id}'"`)}
+                                    <div class="flex-1">
+                                        <div class="bg-white/5 rounded-xl p-2 px-3 border border-white/10">
+                                            <div class="flex justify-between items-start mb-0.5">
+                                                <h4 class="font-bold text-white text-[11px] cursor-pointer hover:underline" onclick="window.location.href='profile.html?id=${replyUser.id}'">${replyUser.name}</h4>
+                                                <span class="text-[9px] text-slate-500">${new Date(reply.created_at).toLocaleDateString()}</span>
+                                            </div>
+                                            <p class="text-slate-300 text-xs whitespace-pre-wrap">${reply.reply}</p>
+                                        </div>
+                                        <div class="flex items-center gap-3 mt-1 ml-2">
+                                            <button onclick="likeReply(${reply.id}, this)" class="flex items-center gap-1 text-[10px] font-medium ${rLikeColor} hover:text-pink-500 transition-colors">
+                                                <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' ${rLikeFill}">favorite</span>
+                                                <span onclick="openUserListModal(${reply.id}, 'reply')" class="cursor-pointer hover:text-white">${replyLikeCount > 0 ? replyLikeCount : 'Like'}</span>
+                                            </button>
+                                            <button onclick="toggleReplyInput(${comment.id}, '@${replyUser.name.replace(/\s+/g, '').toLowerCase()} ')" class="flex items-center gap-1 text-[10px] font-medium text-secondary-text hover:text-white transition-colors">
+                                                <span class="material-symbols-outlined text-[14px]">reply</span>
+                                                <span>Reply</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                `;
+                            }).join('');
+                            repliesHTML += '</div>';
+                        }
+
+                        return `
+                        <div class="flex gap-3 items-start animate-fade-in group/comment">
+                            ${renderAvatarHTML(user, "w-8 h-8 rounded-full border border-white/10 cursor-pointer object-cover", `onclick="window.location.href='profile.html?id=${user.id}'"`)}
+                            <div class="flex-1">
+                                <div class="bg-white/5 rounded-xl p-3 border border-white/10">
+                                    <div class="flex justify-between items-start mb-1">
+                                        <h4 class="font-bold text-white text-xs cursor-pointer hover:underline" onclick="window.location.href='profile.html?id=${user.id}'">${user.name}</h4>
+                                        <span class="text-[10px] text-slate-500">${new Date(comment.created_at).toLocaleDateString()}</span>
+                                    </div>
+                                    <p class="text-slate-300 text-sm whitespace-pre-wrap">${comment.comment}</p>
+                                </div>
+                                
+                                <div class="flex items-center gap-4 mt-1 ml-2">
+                                    <button onclick="likeComment(${comment.id}, this)" class="flex items-center gap-1 text-xs font-medium ${likeColorClass} hover:text-pink-500 transition-colors">
+                                        <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' ${likeFill}">favorite</span>
+                                        <span onclick="openUserListModal(${comment.id}, 'comment')" class="cursor-pointer hover:text-white">${likeCount > 0 ? likeCount : 'Like'}</span>
+                                    </button>
+                                    <button onclick="toggleReplyInput(${comment.id})" class="flex items-center gap-1 text-xs font-medium text-secondary-text hover:text-white transition-colors">
+                                        <span class="material-symbols-outlined text-[16px]">reply</span>
+                                        <span>Reply</span>
+                                    </button>
+                                </div>
+
+                                ${repliesHTML}
+
+                                <div id="reply-box-${comment.id}" class="hidden mt-2 flex gap-2 items-start ml-2">
+                                        ${renderAvatarHTML(currentUserData || userData, "w-6 h-6 rounded-full border border-white/10 mt-1 object-cover")}
+                                        <div class="flex-1">
+                                        <textarea id="reply-input-${comment.id}" class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-slate-300 focus:outline-none focus:border-primary/50 transition-all resize-none h-16 placeholder:text-slate-500" placeholder="Write a reply..."></textarea>
+                                        <div class="flex justify-end mt-1">
+                                                <button onclick="submitReply(${comment.id})" class="px-3 py-1 bg-primary text-white text-[10px] font-bold rounded-md hover:bg-blue-600 transition-colors">Reply</button>
+                                        </div>
+                                        </div>
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+                } else {
+                    list.innerHTML = '<div class="text-xs text-secondary-text text-center py-2">No comments yet.</div>';
+                }
+            } catch(e) {
+                console.error(e);
+                list.innerHTML = '<div class="text-xs text-red-400 text-center py-2">Failed to load comments.</div>';
+            }
+    }
+}
+
+function toggleReplyInput(commentId, mention = '') {
+    const box = document.getElementById(`reply-box-${commentId}`);
+    const input = document.getElementById(`reply-input-${commentId}`);
+    
+    box.classList.remove('hidden');
+    
+    if(mention) {
+        input.value = mention;
+    }
+    
+    setTimeout(() => {
+        input.focus();
+        if(mention) input.setSelectionRange(input.value.length, input.value.length);
+    }, 50);
+}
+
+async function likeComment(commentId, btn) {
+    const icon = btn.querySelector('.material-symbols-outlined');
+    const bgClass = btn.classList.contains('text-pink-500');
+    const countSpan = btn.querySelector('span:last-child');
+    let count = parseInt(countSpan.innerText) || 0;
+
+    if (bgClass) {
+        btn.classList.remove('text-pink-500');
+        btn.classList.add('text-secondary-text');
+        icon.style.fontVariationSettings = "'FILL' 0";
+        count = Math.max(0, count - 1);
+    } else {
+        btn.classList.add('text-pink-500');
+        btn.classList.remove('text-secondary-text');
+        icon.style.fontVariationSettings = "'FILL' 1";
+        count++;
+    }
+    countSpan.innerText = count > 0 ? count : 'Like';
+
+    try {
+        await fetch(`${API_BASE_URL}/add_reaction_to_comment`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ comment_id: commentId, type: 1 })
+        });
+    } catch (e) { console.error(e); }
+}
+
+async function likeReply(replyId, btn) {
+    const icon = btn.querySelector('.material-symbols-outlined');
+    const bgClass = btn.classList.contains('text-pink-500');
+    const countSpan = btn.querySelector('span:last-child');
+    let count = parseInt(countSpan.innerText) || 0;
+
+    if (bgClass) {
+        btn.classList.remove('text-pink-500');
+        btn.classList.add('text-secondary-text');
+        icon.style.fontVariationSettings = "'FILL' 0";
+        count = Math.max(0, count - 1);
+    } else {
+        btn.classList.add('text-pink-500');
+        btn.classList.remove('text-secondary-text');
+        icon.style.fontVariationSettings = "'FILL' 1";
+        count++;
+    }
+    countSpan.innerText = count > 0 ? count : 'Like';
+    
+    try {
+        await fetch(`${API_BASE_URL}/add_reaction_to_comment_reply`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ comment_reply_id: replyId, type: 1 })
+        });
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function submitReply(commentId) {
+    const input = document.getElementById(`reply-input-${commentId}`);
+    const content = input.value.trim();
+    if(!content) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/create_comment_reply`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ comment_id: commentId, reply: content })
+        });
+        const data = await response.json();
+        if(response.status === 200 || response.status === 202) {
+                input.value = '';
+                toggleReplyInput(commentId);
+                showToast('Reply posted! ↩️');
+                
+                if (typeof loadTabContent === 'function') loadTabContent();
+                else if (typeof loadPosts === 'function') loadPosts();
+                else if (typeof loadPostDetail === 'function') loadPostDetail();
+        } else {
+                showToast(data.message || 'Failed to reply', 'error');
+        }
+    } catch(e) {
+            console.error(e);
+            showToast('Error replying', 'error');
+    }
+}
+
+async function submitComment(postId) {
+        const input = document.getElementById(`comment-input-${postId}`);
+        const content = input.value.trim();
+        if(!content) return;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/create_comment`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    post_id: postId,
+                    comment: content
+                })
+            });
+            
+            const data = await response.json();
+            
+            if(data.success) {
+                input.value = '';
+                showToast('Comment posted! 💬');
+                toggleCommentSection(postId); // Close on success
+                
+                // This is a profile-specific or dashboard-specific callback.
+                // We'll check if loadTabContent (profile) or loadPosts (dashboard) exists
+                if (typeof loadTabContent === 'function') loadTabContent();
+                else if (typeof loadPosts === 'function') loadPosts();
+                else if (typeof loadPostDetail === 'function') loadPostDetail();
+                
+            } else {
+                showToast(data.message || 'Failed to post comment', 'error');
+            }
+        } catch(e) {
+            console.error(e);
+            showToast('Error posting comment', 'error');
+        }
+}
+
+async function likePost(id, btn) {
+    const icon = btn.querySelector('.material-symbols-outlined');
+    const isLiked = btn.classList.contains('text-pink-500');
+    const countSpan = btn.nextElementSibling;
+    let currentCount = parseInt(countSpan.innerText) || 0;
+    
+    if (isLiked) {
+        btn.classList.remove('text-pink-500');
+        btn.classList.add('text-secondary-text');
+        icon.style.fontVariationSettings = "'FILL' 0";
+        if(currentCount > 0) countSpan.innerText = currentCount - 1 || '';
+    } else {
+        btn.classList.remove('text-secondary-text');
+        btn.classList.add('text-pink-500');
+        icon.style.fontVariationSettings = "'FILL' 1";
+        countSpan.innerText = currentCount + 1;
+    }
+
+    try {
+        await fetch(`${API_BASE_URL}/add_reaction_to_post`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                post_id: id,
+                type: 1 
+            })
+        });
+    } catch (e) {
+        console.error(e);
+        // Revert on error if needed
+    }
+}
+
+// Likers Modal Logic
+// Generic User List Modal Logic
+let likersModalOpen = false;
+
+// Can be called with (id, type) for fetching, OR (title, userList) for direct display
+async function openUserListModal(arg1, arg2) {
+    const modal = document.getElementById('likers-modal');
+    const list = document.getElementById('likers-list');
+    
+    if(!modal) return console.error("User list modal element not found");
+
+    modal.classList.remove('hidden');
+    setTimeout(() => modal.firstElementChild.classList.remove('scale-95', 'opacity-0'), 10);
+    likersModalOpen = true;
+
+    const titleEl = modal.querySelector('h3');
+    list.innerHTML = '<div class="text-center text-slate-400 py-8">Loading...</div>';
+
+    // Check if arg2 is an array (Direct Mode for Followers/Following)
+    if (Array.isArray(arg2)) {
+        if (titleEl) titleEl.textContent = arg1; // arg1 is Title
+        renderUserList(arg2, list);
+        return;
+    }
+
+    // Fetch Mode (Likers)
+    const id = arg1;
+    const type = arg2 || 'post'; // post, comment, reply
+
+    if(titleEl) titleEl.textContent = type === 'post' ? 'Post Likes' : type === 'comment' ? 'Comment Likes' : 'Reply Likes';
+
+    let endpoint = '/get_post_reactions';
+    let body = { post_id: id };
+
+    if (type === 'comment') {
+        endpoint = '/get_comment_reactions';
+        body = { comment_id: id };
+    } else if (type === 'reply') {
+        endpoint = '/get_reply_reactions';
+        body = { reply_id: id };
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+        const data = await response.json();
+
+        if (data.success && data.data.items) {
+            renderUserList(data.data.items, list);
+        } else {
+            list.innerHTML = '<div class="text-center text-slate-500 py-8">No users found.</div>';
+        }
+    } catch(e) {
+        console.error(e);
+        list.innerHTML = `<div class="text-center text-red-400 py-8">Failed to load.</div>`;
+    }
+}
+
+function renderUserList(users, container) {
+    if (!users || users.length === 0) {
+        container.innerHTML = '<div class="text-center text-slate-500 py-8">List is empty.</div>';
+        return;
+    }
+
+    container.innerHTML = users.map(user => {
+        // Handle varying structure if API returns nested object, but typically we want the User object
+        // If 'creator' exists (from reactions), use it, otherwise assume 'user' IS the user object
+        const u = user.creator || user; 
+        
+        return `
+        <div class="flex items-center justify-between p-3 hover:bg-white/5 rounded-xl transition-colors cursor-pointer" onclick="window.location.href='profile.html?id=${u.id}'">
+            <div class="flex items-center gap-3">
+                ${renderAvatarHTML(u, "w-10 h-10 rounded-full border border-white/10 object-cover")}
+                <div>
+                    <h4 class="font-bold text-white text-sm">${u.name || 'Unknown User'}</h4>
+                    <p class="text-xs text-slate-400">@${(u.name || '').replace(/\s+/g, '').toLowerCase()}</p>
+                </div>
+            </div>
+             <!-- Optional: Add Follow Button here if needed in future -->
+        </div>
+    `}).join('');
+}
+
+function closeLikersModal() {
+    const modal = document.getElementById('likers-modal');
+    if(!modal) return;
+    
+    modal.firstElementChild.classList.add('scale-95', 'opacity-0');
+    setTimeout(() => modal.classList.add('hidden'), 200);
+    likersModalOpen = false;
+}
+
+// Initialize modal listener if element exists
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('likers-modal');
+    if(modal) {
+        modal.addEventListener('click', (e) => {
+            if(e.target === modal) closeLikersModal();
+        });
+    }
+});

@@ -70,6 +70,14 @@ class AuthController extends BaseController
                     'message' => 'Invalid credentials',
                 ], 401);
             }
+
+            if ($user->is_banned == 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your account has been banned. Please contact support.',
+                ], 403);
+            }
+
             if (!$token = auth('api')->login($user)) {
                 return response()->json([
                     'success' => false,
@@ -250,7 +258,6 @@ class AuthController extends BaseController
             return $this->unauthorized();
         }
         auth('api')->logout();
-
         return response()->json(['message' => 'Successfully logged out']);
     }
     public function refresh_token()
@@ -258,6 +265,10 @@ class AuthController extends BaseController
         $user = auth('api')->user();
         if (!$user) {
             return $this->unauthorized();
+        }
+        if ($user->is_banned == 1) {
+            auth('api')->logout(); // Invalidate the token immediately
+            return response()->json(['error' => 'Your account has been banned. Please contact support.'], 403);
         }
         $token = auth('api')->refresh();
         return $this->respondWithToken($token, $user);

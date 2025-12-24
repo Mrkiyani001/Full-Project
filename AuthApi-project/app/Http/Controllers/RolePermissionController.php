@@ -13,7 +13,7 @@ class RolePermissionController extends BaseController
  public function create_role(Request $request){
         $this->validateRequest($request, [
         'name' => 'required|string|unique:roles,name',
-        'permissions' => 'required|array',
+        'permissions' => 'sometimes|array',
         'permissions.*' => 'string|exists:permissions,name',
         ]);
     try{
@@ -57,7 +57,7 @@ class RolePermissionController extends BaseController
     } 
     public function assign_role(Request $request){
             $this->validateRequest($request, [
-            'role' => 'required|string',
+            'role' => 'required',
             'user_id' => 'required|integer|exists:users,id',
             ]);
         try{
@@ -66,8 +66,9 @@ class RolePermissionController extends BaseController
                 return $this->unauthorized();
             }
             $user = User::findOrFail($request->user_id);
+            // syncRoles accepts string or array
             $user->syncRoles($request->role);
-            return $this->response(true, 'Role assigned successfully', $user, 200);
+            return $this->response(true, 'Roles synced successfully', $user, 200);
         }catch(\Exception $e){
             Log::error("Error assigning role: ".$e->getMessage());
             return $this->Response(false, $e->getMessage(), null, 500);
@@ -186,7 +187,7 @@ class RolePermissionController extends BaseController
         }
         public function get_all_roles(){
         try{
-            $roles = Role::where('guard_name', 'api')
+            $roles = Role::with('permissions')->where('guard_name', 'api')
             ->whereNotIn('name', ['super-admin', 'user'])
             ->get();
             return $this->response(true, 'Roles retrieved successfully', $roles, 200);
@@ -204,4 +205,30 @@ class RolePermissionController extends BaseController
                 return $this->Response(false, $e->getMessage(), null, 500);
             }
         }
+    public function create_permission(Request $request)
+    {
+        $this->validateRequest($request, [
+            'name' => 'required|string|unique:permissions,name',
+        ]);
+        try {
+            $permission = Permission::create(['name' => $request->name, 'guard_name' => 'api']);
+            return $this->response(true, 'Permission created successfully', $permission, 200);
+        } catch (\Exception $e) {
+            return $this->Response(false, $e->getMessage(), null, 500);
+        }
     }
+
+    public function delete_permission(Request $request)
+    {
+        $this->validateRequest($request, [
+            'name' => 'required|string|exists:permissions,name',
+        ]);
+        try {
+            $permission = Permission::where('name', $request->name)->where('guard_name', 'api')->firstOrFail();
+            $permission->delete();
+            return $this->response(true, 'Permission deleted successfully', null, 200);
+        } catch (\Exception $e) {
+            return $this->Response(false, $e->getMessage(), null, 500);
+        }
+    }
+}

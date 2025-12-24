@@ -1,23 +1,29 @@
 <!DOCTYPE html>
-<html class="dark" lang="en"><head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>SocialApp - Post Detail</title>
-<!-- Fonts -->
-<link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<!-- Tailwind CSS -->
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<!-- Theme Configuration -->
-<script id="tailwind-config">
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>SocialApp - Post Detail</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Theme Configuration -->
+    <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
             theme: {
                 extend: {
                     colors: {
-                        "primary": "#3b82f6", 
+                        "primary": "#3b82f6",
                         "primary-hover": "#2563eb",
                         "accent-purple": "#8b5cf6",
                         "background-light": "#f6f6f8",
@@ -26,326 +32,273 @@
                         "glass-border": "rgba(255, 255, 255, 0.08)",
                         "secondary-text": "#9da5b9"
                     },
-                    fontFamily: {
-                        "display": ["Plus Jakarta Sans", "sans-serif"]
-                    },
-                    borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "2xl": "1.5rem", "3xl": "2rem", "full": "9999px"},
+                    fontFamily: { "display": ["Plus Jakarta Sans", "sans-serif"] },
+                    borderRadius: { "DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "2xl": "1.5rem", "3xl": "2rem", "full": "9999px" },
                 },
             },
         }
     </script>
-<style>
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #282d39; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #3e4556; }
+    <style>
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #282d39;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3e4556;
+        }
+
         .glass-panel {
             background: linear-gradient(145deg, rgba(28, 32, 45, 0.6) 0%, rgba(20, 24, 34, 0.8) 100%);
             backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
             border: 1px solid rgba(255, 255, 255, 0.06);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
         }
+
         .glass-nav {
-             background: rgba(15, 17, 26, 0.8);
+            background: rgba(15, 17, 26, 0.8);
             backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
         }
     </style>
 </head>
-<body class="bg-background-dark font-display text-white min-h-screen flex flex-col overflow-x-hidden selection:bg-primary/30">
-<!-- Top Navigation -->
-<header class="glass-nav sticky top-0 z-50">
- <div class="px-4 md:px-10 py-4 flex items-center justify-between whitespace-nowrap">
-        <div class="flex items-center gap-3 cursor-pointer group select-none" onclick="window.location.href='homefeed-dashboard.html'">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-blue-700 flex items-center justify-center text-white shadow-lg">
-                <span class="material-symbols-outlined text-[26px]">token</span>
-            </div>
-            <div class="hidden md:flex flex-col">
-                <span class="text-xl font-bold tracking-tight text-white leading-none">Social</span>
-                <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest leading-none mt-1">Detail View</span>
-            </div>
-        </div>
-        
-        <div class="flex items-center gap-4">
-             <button id="logout-btn" class="w-10 h-10 rounded-full hover:bg-white/5 flex items-center justify-center text-slate-300 hover:text-red-400 transition-all btn-icon-hover" title="Logout">
-                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0, 'wght' 300;">logout</span>
-            </button>
-             <div class="w-px h-8 bg-glass-border mx-1"></div>
-             <div class="flex items-center gap-3 pl-1 cursor-pointer">
-                <img id="nav-user-avatar" alt="Profile" class="w-10 h-10 rounded-full border-2 border-[#101522] object-cover" src="https://ui-avatars.com/api/?name=User&background=random"/>
-             </div>
-        </div>
- </div>
-</header>
-<!-- Main Content Area -->
-<main class="flex-1 relative flex justify-center py-8 px-4 md:px-0">
-    <!-- Ambient Background Glows -->
-    <div class="fixed top-[20%] left-[10%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
-    <div class="fixed bottom-[10%] right-[10%] w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
 
-    <!-- Central Card Container -->
-    <div class="relative w-full max-w-[840px] z-10 flex flex-col gap-6">
-        <!-- Breadcrumbs / Back -->
-        <div class="flex items-center gap-2 text-secondary-text hover:text-white cursor-pointer transition-colors px-2" onclick="window.location.href='homefeed-dashboard.html'">
-            <span class="material-symbols-outlined text-sm">arrow_back</span>
-            <span class="text-sm font-medium">Back to Feed</span>
-        </div>
-
-        <!-- Post Card -->
-        <article class="glass-panel rounded-2xl shadow-2xl overflow-hidden flex flex-col" id="post-card">
-              <div class="flex justify-center p-12"><span class="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span></div>
-              <!-- Content injected via JS -->
-        </article>
-
-        <!-- Comments Section -->
-        <section class="glass-panel rounded-2xl p-6 relative">
-            <!-- Header -->
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-white text-lg font-bold" id="comments-title">Comments (0)</h3>
+<body class="bg-background-dark font-display text-white min-h-screen flex flex-col pt-20">
+    <!-- Header -->
+    <header class="glass-nav fixed top-0 w-full z-50">
+        <div class="px-4 md:px-10 py-4 flex items-center justify-between whitespace-nowrap max-w-7xl mx-auto w-full">
+            <div class="flex items-center gap-3 cursor-pointer group"
+                onclick="window.location.href='homefeed-dashboard.html'">
+                <div
+                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-blue-700 flex items-center justify-center text-white shadow-lg shadow-primary/20 transition-transform group-hover:scale-105">
+                    <span class="material-symbols-outlined text-[26px]">token</span>
+                </div>
+                <div class="hidden md:flex flex-col">
+                    <span class="text-xl font-bold tracking-tight text-white leading-none">Social</span>
+                    <span
+                        class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest leading-none mt-1">Detail
+                        View</span>
+                </div>
             </div>
 
-            <!-- Sticky Comment Input -->
-            <div class="sticky top-20 z-20 mb-8 -mx-2 px-2 pb-4 bg-[#14161c]/95 backdrop-blur-xl rounded-xl border border-white/5 shadow-lg">
-                <div class="flex gap-4 items-start pt-4">
-                    <img id="current-user-input-avatar" class="size-10 rounded-full bg-cover bg-center shrink-0" src="https://ui-avatars.com/api/?name=User&background=random">
-                    <div class="flex-1">
-                        <div class="relative group">
-                            <textarea id="comment-input" class="w-full bg-[#1c1f27] border border-[#282d39] rounded-xl p-3 text-white placeholder:text-secondary-text focus:ring-2 focus:ring-primary focus:border-transparent min-h-[80px] resize-y transition-shadow text-sm" placeholder="What are your thoughts?"></textarea>
-                            <div class="absolute bottom-3 right-3">
-                                <button id="submit-comment-btn" class="bg-primary hover:bg-blue-600 text-white text-sm font-bold py-1.5 px-4 rounded-lg transition-colors shadow-lg shadow-blue-500/20">Post</button>
+            <!-- Global Search -->
+            <div
+                class="relative group hidden sm:block w-32 md:w-36 lg:w-48 transition-all focus-within:w-48 md:focus-within:w-52 lg:focus-within:w-64 shrink ms-auto md:ms-0 z-10">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span
+                        class="material-symbols-outlined text-slate-500 text-[20px] group-focus-within:text-primary transition-colors">search</span>
+                </div>
+                <input id="global-search-input"
+                    class="bg-white/5 border-transparent focus:bg-white/10 focus:border-primary/50 block w-full pl-10 pr-3 py-2 rounded-full text-xs md:text-sm font-medium focus:outline-none transition-all"
+                    placeholder="Search..." type="text">
+            </div>
+
+            <div class="flex items-center gap-4">
+                <a href="notification.html" class="relative group p-2 text-slate-400 hover:text-primary transition-all">
+                    <span class="material-symbols-outlined text-[24px]">notifications</span>
+                    <span id="notif-badge-desktop"
+                        class="hidden absolute top-1 right-1 min-w-[14px] h-[14px] bg-red-500 text-white text-[8px] font-bold rounded-full border border-background-dark flex items-center justify-center animate-pulse"></span>
+                </a>
+                <!-- Logout button removed -->
+                <div class="w-px h-8 bg-white/10 mx-1 hidden md:block"></div>
+                
+                <div class="relative group/profile shrink-0">
+                    <div class="flex items-center gap-3 pl-1 cursor-pointer" onclick="toggleProfileDropdown()">
+                        <div class="flex flex-col items-end hidden xl:flex">
+                            <span id="header-user-name" class="text-xs font-bold text-white leading-none initials-name">User</span>
+                            <div class="flex items-center gap-1">
+                                <span id="header-user-handle" class="text-[9px] text-slate-500 font-medium mt-1">@user</span>
+                                <span class="material-symbols-outlined text-[14px] text-slate-500 mt-1">keyboard_arrow_down</span>
                             </div>
                         </div>
+                        <div class="relative">
+                            <img id="nav-user-avatar" alt="Avatar"
+                                class="w-9 h-9 md:w-10 md:h-10 rounded-full border-2 border-white/10 group-hover/profile:border-primary/50 transition-all object-cover bg-slate-700" src="">
+                            <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-[#0f111a] rounded-full"></div>
+                        </div>
+                    </div>
+
+                    <!-- Dropdown Menu -->
+                    <div id="profile-dropdown" class="hidden absolute top-full right-0 mt-3 w-48 bg-card-dark border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-fade-in">
+                        <a href="profile.html" class="block px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">person</span>
+                            View Profile
+                        </a>
+                        <div class="h-px bg-white/5 my-1"></div>
+                        <button onclick="localStorage.removeItem('auth_token'); localStorage.removeItem('user_data'); window.location.href='login.html'" 
+                            class="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">logout</span>
+                            Logout
+                        </button>
                     </div>
                 </div>
             </div>
+        </div>
+    </header>
 
-            <!-- Threaded Comments List -->
-            <div class="space-y-6" id="comments-list">
-                 <div class="flex justify-center py-4"><span class="text-slate-500 text-sm">Loading comments...</span></div>
+    <main class="flex-1 relative flex justify-center py-8 px-4 md:px-0">
+        <div class="relative w-full max-w-2xl z-10 flex flex-col gap-6">
+            <!-- Back Button -->
+            <div class="flex items-center gap-2 text-secondary-text hover:text-white cursor-pointer transition-colors px-2"
+                onclick="window.location.href='homefeed-dashboard.html'">
+                <span class="material-symbols-outlined text-sm">arrow_back</span>
+                <span class="text-sm font-medium">Back to Feed</span>
             </div>
-            
-            <div class="h-8"></div>
-        </section>
-        
-        <div class="h-10"></div>
+
+            <!-- Post Container -->
+            <div id="post-detail-container" class="animate-fade-in">
+                <div class="flex justify-center p-20">
+                    <div class="size-8 border-2 border-white/10 border-t-primary rounded-full animate-spin"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Likers Modal -->
+    <div id="likers-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-background-dark/80 backdrop-blur-sm"></div>
+        <div
+            class="relative bg-surface-dark border border-white/10 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transform transition-all scale-95 opacity-0">
+            <div class="p-4 border-b border-white/5 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-white">Likes</h3>
+                <button onclick="closeLikersModal()"
+                    class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/5 text-slate-400">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+            </div>
+            <div id="likers-list" class="max-h-[60vh] overflow-y-auto p-2 custom-scrollbar">
+                <!-- Likers will be loaded here -->
+            </div>
+        </div>
     </div>
-</main>
-<script>
-    const API_BASE_URL = 'http://127.0.0.1:8000/api';
-    const PUBLIC_URL = 'http://127.0.0.1:8000';
-    
-    // Auth & Params
-    const token = localStorage.getItem('auth_token');
-    const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
-    const urlParams = new URLSearchParams(window.location.search);
-    const postId = urlParams.get('id');
 
-    if (!token) window.location.href = 'login.html';
-    if (!postId) { alert('No post specified'); window.location.href = 'homefeed-dashboard.html'; }
+    <!-- Mobile Nav (Invisible on large screens) -->
+    <nav
+        class="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around h-16 md:hidden glass-nav border-t border-white/5 bg-background-dark/80 backdrop-blur-lg">
+        <a href="homefeed-dashboard.html"
+            class="flex flex-col items-center justify-center gap-1 p-2 w-16 text-slate-400">
+            <span class="material-symbols-outlined text-[24px]">home</span>
+            <span class="text-[10px] font-medium">Home</span>
+        </a>
+        <a href="#" class="flex flex-col items-center justify-center gap-1 p-2 w-16 text-slate-400">
+            <span class="material-symbols-outlined text-[24px]">explore</span>
+            <span class="text-[10px] font-medium">Explore</span>
+        </a>
+        <a href="notification.html"
+            class="flex flex-col items-center justify-center gap-1 p-2 w-16 text-slate-400 relative">
+            <div class="relative">
+                <span class="material-symbols-outlined text-[24px]">notifications</span>
+                <span id="notif-badge-mobile"
+                    class="hidden absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-background-dark animate-pulse"></span>
+            </div>
+            <span class="text-[10px] font-medium">Notifications</span>
+        </a>
+        <a href="profile.html" class="flex flex-col items-center justify-center gap-1 p-2 w-16 text-slate-400">
+            <span class="material-symbols-outlined text-[24px]">person</span>
+            <span class="text-[10px] font-medium">Profile</span>
+        </a>
+    </nav>
 
-    // Navigation setup
-    if(userData.name) {
-         document.getElementById('nav-user-avatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=random`;
-         document.getElementById('current-user-input-avatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=random`;
-    }
-    document.getElementById('logout-btn').onclick = () => {
-         localStorage.removeItem('auth_token');
-         localStorage.removeItem('user_data');
-         window.location.href = 'login.html';
-    };
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000/api';
+        const PUBLIC_URL = 'http://127.0.0.1:8000';
+        const token = localStorage.getItem('auth_token');
+        const currentUserData = JSON.parse(localStorage.getItem('user_data') || '{}');
+        const userData = currentUserData; // Compatibility alias
+        const urlParams = new URLSearchParams(window.location.search);
+        const postId = urlParams.get('id');
 
-    // Load Post
-    async function loadPost() {
-        try {
-            const response = await fetch(`${API_BASE_URL}/get_post`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ id: postId })
-            });
-            const data = await response.json();
+        if (!token) window.location.href = 'login.html';
+        if (!postId) window.location.href = 'homefeed-dashboard.html';
+
+        document.getElementById('logout-btn').onclick = () => {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        };
+    </script>
+    <script src="js/post_utils.js"></script>
+    <script src="js/notifications.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Standardize Header Avatar
+            const navAv = document.getElementById('nav-user-avatar');
             
-            if(data.success) {
-                renderPost(data.data);
-                loadComments();
-            } else {
-                document.getElementById('post-card').innerHTML = `<div class="p-12 text-center text-red-400">Post not found.</div>`;
+            const headerName = document.getElementById('header-user-name');
+            const headerHandle = document.getElementById('header-user-handle');
+            if (headerName) headerName.innerText = currentUserData.name || 'User';
+            if (headerHandle) headerHandle.innerText = '@' + (currentUserData.name ? currentUserData.name.toLowerCase().replace(/\s+/g, '') : 'user');
+
+            if (navAv && currentUserData.name) {
+                const initials = DEFAULT_AVATAR(currentUserData.name);
+                const avUrl = getAvatarUrl(currentUserData) || initials;
+                navAv.src = avUrl;
+                navAv.onerror = () => { navAv.onerror = null; navAv.src = initials; };
             }
-        } catch(e) {
-            console.error(e);
-            document.getElementById('post-card').innerHTML = `<div class="p-12 text-center text-red-400">Error loading post.</div>`;
+
+            loadPostDetail();
+        });
+
+        async function loadPostDetail() {
+            const container = document.getElementById('post-detail-container');
+            try {
+                const response = await fetch(`${API_BASE_URL}/get_post`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ id: postId })
+                });
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    const post = data.data;
+                    // Use shared createPostHTML
+                    container.innerHTML = createPostHTML(post);
+
+                    // Auto-open comment section on detail view
+                    setTimeout(() => {
+                        toggleCommentSection(post.id);
+                    }, 100);
+                } else {
+                    container.innerHTML = `<div class="p-20 text-center text-red-400 bg-white/5 rounded-2xl border border-white/10">
+                        <span class="material-symbols-outlined text-4xl mb-4 block">error</span>
+                        <p class="font-bold">Post not found</p>
+                        <p class="text-sm text-slate-400 mt-1">This post may have been deleted or is no longer available.</p>
+                    </div>`;
+                }
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = `<div class="p-20 text-center text-red-400 font-bold">Error loading post detail.</div>`;
+            }
         }
-    }
 
-    function renderPost(post) {
-        const user = post.user || { name: 'Unknown', id: 0 };
-        const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`;
-        const timeAgo = new Date(post.created_at).toLocaleString();
+        // Override submitComment callback to refresh the detail view correctly
+        // The post_utils.js calls toggleCommentSection(postId) on success which refreshes the list
+        // but we might want to keep the section open.
+    </script>
+</body>
 
-        let attachmentsHTML = '';
-         if (post.attachments && post.attachments.length > 0) {
-            const files = Array.isArray(post.attachments) ? post.attachments : [];
-            if (files.length > 0) {
-                 attachmentsHTML = `<div class="px-6 py-4"><div class="rounded-xl overflow-hidden border border-white/10">`;
-                 const file = files[0];
-                 let src = '';
-                 if (typeof file === 'object' && file.file_path) {
-                    src = `${PUBLIC_URL}/${file.file_path}`;
-                 } else if (typeof file === 'string') {
-                    src = `${PUBLIC_URL}/posts/${file}`;
-                 }
-                 if(src){
-                    attachmentsHTML += `<img class="w-full object-cover" src="${src}" />`;
-                 }
-                 attachmentsHTML += `</div></div>`;
-            }
-        }
-
-        const html = `
-            <div class="p-6 pb-2 flex justify-between items-start">
-                <div class="flex gap-4 items-center">
-                    <div class="relative cursor-pointer" onclick="window.location.href='profile.html?id=${user.id}'">
-                        <div class="w-12 h-12 rounded-full bg-cover bg-center border-2 border-primary/20" style='background-image: url("${avatarUrl}");'></div>
-                    </div>
-                    <div class="flex flex-col">
-                        <div class="flex items-center gap-2">
-                             <h3 class="text-white text-base font-bold hover:underline cursor-pointer" onclick="window.location.href='profile.html?id=${user.id}'">${user.name}</h3>
-                        </div>
-                        <div class="flex items-center gap-2 text-secondary-text text-sm">
-                            <span>@user${user.id}</span>
-                            <span class="text-[8px] opacity-50">●</span>
-                            <span>${timeAgo}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="px-6 py-2">
-                <p class="text-slate-100 text-lg leading-relaxed font-normal whitespace-pre-line">${post.body}</p>
-            </div>
-            ${attachmentsHTML}
-            <div class="px-6 py-4 border-t border-white/5 bg-white/[0.02]">
-                <div class="flex gap-4">
-                    <button onclick="likePost(${post.id})" class="flex items-center gap-2 group hover:text-red-400 transition-colors">
-                        <span class="material-symbols-outlined text-secondary-text group-hover:text-red-400">favorite</span>
-                        <span class="text-secondary-text font-bold text-sm group-hover:text-red-400">Like</span>
-                    </button>
-                    <!-- Share etc... -->
-                </div>
-            </div>
-        `;
-        document.getElementById('post-card').innerHTML = html;
-    }
-
-    async function loadComments() {
-         try {
-            const response = await fetch(`${API_BASE_URL}/get_comment`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ post_id: postId })
-            });
-            const data = await response.json();
-            
-            const list = document.getElementById('comments-list');
-            list.innerHTML = '';
-            
-            if(data.success && data.data && data.data.length > 0) {
-                 document.getElementById('comments-title').textContent = `Comments (${data.data.length})`;
-                 data.data.forEach(comment => {
-                     list.insertAdjacentHTML('beforeend', createCommentHTML(comment));
-                 });
-            } else {
-                  list.innerHTML = '<div class="text-center text-slate-500 py-4">No comments yet.</div>';
-                  document.getElementById('comments-title').textContent = `Comments (0)`;
-            }
-
-        } catch(e) { console.error(e); }
-    }
-
-    function createCommentHTML(comment) {
-        const user = comment.user || { name: 'Unknown', id: 0 };
-        const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`;
-        const timeAgo = new Date(comment.created_at).toLocaleDateString();
-
-        return `
-            <div class="flex gap-4 group/comment">
-                <div class="flex flex-col items-center gap-2">
-                    <div class="size-10 rounded-full bg-cover bg-center shrink-0 cursor-pointer" onclick="window.location.href='profile.html?id=${user.id}'" style='background-image: url("${avatarUrl}");'></div>
-                    <div class="w-0.5 h-full bg-[#282d39] group-hover/comment:bg-[#3e4556] transition-colors rounded-full mt-1 min-h-[20px]"></div>
-                </div>
-                <div class="flex-1 pb-4">
-                    <div class="flex items-center gap-2 mb-1">
-                        <span class="text-white font-bold text-sm cursor-pointer hover:underline" onclick="window.location.href='profile.html?id=${user.id}'">${user.name}</span>
-                        <span class="text-xs text-secondary-text">${timeAgo}</span>
-                    </div>
-                    <p class="text-slate-300 text-sm leading-relaxed mb-3">${comment.content}</p>
-                    <div class="flex items-center gap-4">
-                        <button class="flex items-center gap-1.5 text-secondary-text hover:text-white transition-colors text-xs font-semibold group">
-                            <span class="material-symbols-outlined text-[16px] group-hover:text-primary">thumb_up</span> Like
-                        </button>
-                        <button class="flex items-center gap-1.5 text-secondary-text hover:text-white transition-colors text-xs font-semibold group" onclick="alert('Replies coming soon!')">
-                            <span class="material-symbols-outlined text-[16px] group-hover:text-primary">mode_comment</span> Reply
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    // Submit Comment
-    document.getElementById('submit-comment-btn').onclick = async () => {
-        const content = document.getElementById('comment-input').value;
-        if(!content) return;
-        const btn = document.getElementById('submit-comment-btn');
-        btn.disabled = true;
-        btn.textContent = 'Posting...';
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/create_comment`, {
-                 method: 'POST',
-                 headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ post_id: postId, content: content })
-            });
-            const data = await response.json();
-            if(data.success) {
-                document.getElementById('comment-input').value = '';
-                loadComments();
-            } else {
-                alert('Failed: ' + data.message);
-            }
-        } catch(e) { console.error(e); } 
-        finally { btn.disabled = false; btn.textContent = 'Post'; }
-    };
-
-    // Like Logic (Simplified)
-    async function likePost(id) {
-         try {
-            await fetch(`${API_BASE_URL}/add_reaction_to_post`, {
-                method: 'POST',
-                 headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ post_id: id, type: 1 })
-            });
-            alert('Liked!');
-        } catch(e) { console.error(e); }
-    }
-
-    loadPost(); // Init
-</script>
-</body></html>
+</html>

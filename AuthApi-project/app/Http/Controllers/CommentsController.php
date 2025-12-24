@@ -50,7 +50,7 @@ class CommentsController extends BaseController
                 SendNotification::dispatch(
                     $user->id,
                     'New Comment',
-                    'User ' . $user->id . ' commented on your post.',
+                    $user->name . ' commented on your post.',
                     $post->user_id,
                     $post,
                     'N'
@@ -202,7 +202,7 @@ class CommentsController extends BaseController
             if (!$user) {
                 return $this->unauthorized();
             }
-            $comments = Comments::with('attachments', 'creator', 'updator', 'user', 'post')
+            $comments = Comments::with('attachments', 'creator.profile.avatar', 'updator', 'user.profile.avatar', 'post')
                 ->where('post_id', $request->post_id)
                 ->withExists(['reactions as is_liked' => function ($q) use ($user) {
                     $q->where('created_by', $user->id)->where('type', 1);
@@ -212,7 +212,7 @@ class CommentsController extends BaseController
                 }])
                 ->withCount('replies')
                 ->with(['replies' => function($q) use ($user) {
-                    $q->with('creator:id,name')
+                    $q->with('creator.profile.avatar')
                       ->withExists(['reactions as is_liked' => function ($q2) use ($user) {
                           $q2->where('created_by', $user->id)->where('type', 1);
                       }])

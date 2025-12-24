@@ -10,6 +10,7 @@ use App\Http\Controllers\ReactionController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RolePermissionController;
+use App\Http\Controllers\AdminController;
 use Illuminate\Support\Facades\Route;
 use Prism\Prism\Facades\Prism;
 use Prism\Prism\Enums\Provider;
@@ -68,13 +69,22 @@ Route::group(['middleware' => ['api', 'auth:api']], function ($router) {
         Route::post('revoke_role_permissions', [RolePermissionController::class, 'revoke_role_permissions']);
     });
     Route::post('get_user_role_permissions', [RolePermissionController::class, 'get_user_role_permissions'])->middleware('permission:manage access|view access');
+    Route::post('role/delete_role', [RolePermissionController::class, 'delete_role'])->middleware('permission:manage access');
+    Route::post('role/create_permission', [RolePermissionController::class, 'create_permission'])->middleware('permission:manage access');
+    Route::post('role/delete_permission', [RolePermissionController::class, 'delete_permission'])->middleware('permission:manage access|view access');
     Route::get('get_all_roles', [RolePermissionController::class, 'get_all_roles'])->middleware('permission:manage access|view access');
     Route::get('get_all_permissions', [RolePermissionController::class, 'get_all_permissions'])->middleware('permission:manage access|view access');
+
+    // Admin Dashboard Routes
+    Route::prefix('admin')->middleware('permission:manage access')->group(function () {
+        Route::get('stats', [AdminController::class, 'stats']);
+        Route::post('ban_user', [AdminController::class, 'banUser']);
+    });
 
     Route::post('approve_post', [PostController::class, 'Approved'])->middleware('permission:posts approve');
     Route::post('reject_post', [PostController::class, 'Rejected'])->middleware('permission:posts reject');
     Route::get('pending_posts', [PostController::class, 'PendingPosts'])->middleware('permission:posts view pending');
-    
+
 
     //Search Bar
     Route::post('search_user', [AuthController::class, 'search_user']);
@@ -102,6 +112,7 @@ Route::group(['middleware' => ['api', 'auth:api']], function ($router) {
     Route::post('get_post', [PostController::class, 'get_post'])->middleware('permission:view posts');
     Route::get('get_all_posts', [PostController::class, 'get_all_posts'])->middleware('permission:view posts');
     Route::post('get_posts_by_user', [PostController::class, 'get_posts_by_user'])->middleware('permission:view posts');
+    Route::post('get_liked_posts', [PostController::class, 'get_liked_posts'])->middleware('permission:view posts');
     // Comment Routes
     Route::post('create_comment', [CommentsController::class, 'create'])->middleware('permission:comments create');
     Route::post('update_comment', [CommentsController::class, 'update'])->middleware('permission:comments update');
@@ -118,6 +129,8 @@ Route::group(['middleware' => ['api', 'auth:api']], function ($router) {
     Route::post('add_reaction_to_comment', [ReactionController::class, 'addReactiontoComment'])->middleware('permission:react on comment');
     Route::post('add_reaction_to_comment_reply', [ReactionController::class, 'addReactiontoCommentReply'])->middleware('permission:react on reply');
     Route::post('get_post_reactions', [ReactionController::class, 'getPostReactions']);
+    Route::post('get_comment_reactions', [ReactionController::class, 'getCommentReactions']);
+    Route::post('get_reply_reactions', [ReactionController::class, 'getReplyReactions']);
 
     // View Routes
     Route::post('add_view_to_post', [AddViewController::class, 'addView'])->middleware('permission:view posts');
@@ -130,4 +143,6 @@ Route::group(['middleware' => ['api', 'auth:api']], function ($router) {
     // Notification Routes
     Route::get('get_user_notifications', [NotificationController::class, 'getUsersNotification']);
     Route::get('get_admin_notifications', [NotificationController::class, 'getAdminNotification']);
+    Route::post('mark_notification_as_read', [NotificationController::class, 'markAsRead']);
+    Route::get('get_unread_notification_count', [NotificationController::class, 'getUnreadCount']);
 });

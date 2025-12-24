@@ -216,9 +216,9 @@
             </div>
         </div>
         <nav
-            class="hidden md:flex items-center gap-1 lg:gap-2 absolute left-1/2 -translate-x-1/2">
+            class="hidden md:flex items-center gap-1 lg:gap-2 absolute left-1/2 -translate-x-1/2 z-10">
             <a class="relative flex items-center gap-2 px-4 lg:px-6 py-2.5 rounded-full bg-gradient-to-r from-primary/10 to-blue-600/10 border border-primary/20 text-primary font-semibold transition-all group shadow-[0_0_15px_rgba(59,130,246,0.15)]"
-                href="#">
+                href="homefeed-dashboard.html">
                 <span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">home</span>
                 <span class="hidden lg:inline">Home</span>
             </a>
@@ -228,84 +228,77 @@
                 <span class="hidden lg:block font-medium">Explore</span>
             </a>
             <a class="flex items-center gap-2 px-3 lg:px-4 py-2.5 rounded-full text-slate-400 hover:text-white hover:bg-white/5 transition-all group relative"
-                href="#">
+                href="notification.html">
                 <div class="relative">
                     <span
                         class="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">notifications</span>
-                    <span
-                        class="absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-[#0f111a] animate-pulse"></span>
+                    <span id="notif-badge-desktop"
+                        class="hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-[#0f111a] flex items-center justify-center animate-pulse"></span>
                 </div>
                 <span class="hidden lg:block font-medium">Notifications</span>
             </a>
             <a class="flex items-center gap-2 px-3 lg:px-4 py-2.5 rounded-full text-slate-400 hover:text-white hover:bg-white/5 transition-all group"
                 href="#">
-                <span class="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">mail</span>
+                <span class="material-symbols-outlined text-[24px] group-hover/btn:scale-110 transition-transform">mail</span>
                 <span class="hidden lg:block font-medium">Messages</span>
             </a>
         </nav>
-        <div
-            class="flex items-center gap-3 md:gap-4 min-w-fit justify-end flex-1 md:flex-none">
-            <div
-                class="relative group hidden sm:block w-48 lg:w-64 transition-all focus-within:w-64 lg:focus-within:w-80">
+        <div class="flex items-center gap-2 md:gap-4 justify-end flex-1 md:flex-initial min-w-0">
+            <!-- Search Bar -->
+            <div class="relative group hidden sm:block w-32 md:w-36 lg:w-48 transition-all focus-within:w-48 md:focus-within:w-52 lg:focus-within:w-64 shrink">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span
-                        class="material-symbols-outlined text-slate-500 text-[20px] group-focus-within:text-primary transition-colors">search</span>
+                    <span class="material-symbols-outlined text-slate-500 text-[20px] group-focus-within:text-primary transition-colors">search</span>
                 </div>
-                <input id="search-input"
-                    class="input-glass w-full rounded-full h-10 pl-10 pr-12 text-white placeholder:text-slate-500 focus:outline-none text-sm font-medium bg-white/5 border-transparent focus:bg-white/10 focus:border-primary/50 transition-all"
-                    placeholder="Search..." type="text" />
-                <div class="absolute inset-y-0 right-3 flex items-center">
-                    <kbd
-                        class="hidden group-focus-within:inline-flex h-5 select-none items-center gap-1 rounded border border-glass-border bg-white/5 px-1.5 font-mono text-[10px] font-medium text-slate-400">
-                        <span class="text-xs">⌘</span>K
-                    </kbd>
-                </div>
+                <input id="global-search-input"
+                    class="bg-white/5 border-transparent focus:bg-white/10 focus:border-primary/50 block w-full pl-10 pr-3 py-2 rounded-full text-xs md:text-sm font-medium focus:outline-none transition-all"
+                    placeholder="Search..." type="text">
             </div>
-            <button class="sm:hidden w-9 h-9 rounded-full hover:bg-white/5 flex items-center justify-center text-slate-300 transition-colors">
+
+            <button class="sm:hidden w-9 h-9 rounded-full hover:bg-white/5 flex items-center justify-center text-slate-300">
                 <span class="material-symbols-outlined text-[20px]">search</span>
             </button>
-            <div class="w-px h-8 bg-glass-border mx-1 hidden md:block"></div>
-            <button id="logout-btn" class="text-slate-500 hover:text-red-400 transition-colors mr-2 cursor-pointer hidden md:block" title="Logout">
-                <span class="material-symbols-outlined">logout</span>
-            </button>
-            <div class="flex items-center gap-3 pl-1 cursor-pointer group/profile" onclick="window.location.href='profile.html'">
-                <div class="relative">
-                    <div
-                        class="w-9 h-9 md:w-10 md:h-10 rounded-full p-[2px] bg-gradient-to-tr from-primary to-accent-purple group-hover/profile:shadow-lg group-hover/profile:shadow-primary/20 transition-all duration-300">
-                        <img id="header-user-avatar" alt="Profile"
-                            class="w-full h-full rounded-full border-2 border-[#101522] object-cover"
-                            src="https://ui-avatars.com/api/?name=User&background=random" />
+            <div class="w-px h-8 bg-white/10 mx-1 hidden md:block"></div>
+            
+            <a href="notification.html" class="md:hidden relative group p-2 text-slate-400">
+                <span class="material-symbols-outlined text-[24px]">notifications</span>
+                <span id="notif-badge-mobile-header" class="hidden absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border border-background-dark animate-pulse"></span>
+            </a>
+
+            <!-- Logout button removed -->
+            <div class="w-px h-8 bg-white/10 mx-1 hidden md:block"></div>
+            
+            <div class="relative group/profile shrink-0">
+                <div class="flex items-center gap-3 pl-1 cursor-pointer" onclick="toggleProfileDropdown()">
+                    <div class="flex flex-col items-end hidden xl:flex">
+                        <span id="header-user-name" class="text-xs font-bold text-white leading-none initials-name">User</span>
+                        <div class="flex items-center gap-1">
+                            <span id="header-user-handle" class="text-[9px] text-slate-500 font-medium mt-1">@user</span>
+                            <span class="material-symbols-outlined text-[14px] text-slate-500 mt-1">keyboard_arrow_down</span>
+                        </div>
                     </div>
-                    <div
-                        class="absolute bottom-0 right-0 w-2.5 h-2.5 md:w-3 md:h-3 bg-green-500 border-2 border-[#101522] rounded-full">
+                    <div class="relative">
+                        <img id="header-user-avatar" alt="Avatar"
+                            class="w-9 h-9 md:w-10 md:h-10 rounded-full border-2 border-white/10 group-hover/profile:border-primary/50 transition-all object-cover bg-slate-700" src="">
+                        <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-[#0f111a] rounded-full"></div>
                     </div>
                 </div>
-                <span
-                    class="material-symbols-outlined text-slate-500 text-sm hidden md:block group-hover/profile:text-white transition-colors">expand_more</span>
+
+                <!-- Dropdown Menu -->
+                <div id="profile-dropdown" class="hidden absolute top-full right-0 mt-3 w-48 bg-card-dark border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-fade-in">
+                    <a href="profile.html" class="block px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">person</span>
+                        View Profile
+                    </a>
+                    <div class="h-px bg-white/5 my-1"></div>
+                    <button onclick="localStorage.removeItem('auth_token'); localStorage.removeItem('user_data'); window.location.href='login.html'" 
+                        class="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">logout</span>
+                        Logout
+                    </button>
+                </div>
             </div>
         </div>
     </header>
-    <div class="md:hidden glass-nav-mobile fixed bottom-0 left-0 w-full z-50 h-[65px] flex items-center justify-around px-2">
-        <a class="flex flex-col items-center justify-center gap-1 p-2 w-16 text-primary" href="#">
-            <span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">home</span>
-            <span class="text-[10px] font-medium">Home</span>
-        </a>
-        <a class="flex flex-col items-center justify-center gap-1 p-2 w-16 text-slate-400 hover:text-white transition-colors" href="#">
-            <span class="material-symbols-outlined text-[24px]">explore</span>
-            <span class="text-[10px] font-medium">Explore</span>
-        </a>
-        <a class="flex flex-col items-center justify-center gap-1 p-2 w-16 text-slate-400 hover:text-white transition-colors relative" href="#">
-            <div class="relative">
-                <span class="material-symbols-outlined text-[24px]">notifications</span>
-                <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-[#161b27]"></span>
-            </div>
-            <span class="text-[10px] font-medium">Alerts</span>
-        </a>
-        <a class="flex flex-col items-center justify-center gap-1 p-2 w-16 text-slate-400 hover:text-white transition-colors" href="#">
-            <span class="material-symbols-outlined text-[24px]">mail</span>
-            <span class="text-[10px] font-medium">Chats</span>
-        </a>
-    </div>
     <main class="pt-[90px] md:pt-[110px] pb-20 px-4 flex justify-center w-full">
         <div class="w-full max-w-[640px] space-y-8">
             <!-- Create Post Card -->
@@ -371,7 +364,7 @@
                         </div>
                     </div>
 
-                    <button id="create-post-btn"
+                    <button id="create-post-btn" type="button"
                         class="px-5 py-1.5 bg-gradient-to-r from-primary to-blue-600 hover:from-blue-500 hover:to-blue-700 text-white text-xs font-bold rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 group/submit">
                         <span>Post</span>
                         <span class="material-symbols-outlined text-[14px] group-hover/submit:translate-x-1 transition-transform">send</span>
@@ -470,83 +463,97 @@
     <div id="toast-container" class="fixed bottom-20 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <!-- Mobile Navigation Bar (fixed bottom) -->
-    <nav class="glass-nav-mobile fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around h-16 md:hidden">
-        <a class="relative flex flex-1 justify-center items-center gap-2 px-2 py-2.5 rounded-full bg-gradient-to-r from-primary/10 to-blue-600/10 border border-primary/20 text-primary font-semibold transition-all group shadow-[0_0_15px_rgba(59,130,246,0.15)]"
-            href="#">
+    <nav class="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around h-16 md:hidden glass-nav border-t border-white/5 bg-background-dark/80 backdrop-blur-lg">
+        <a href="homefeed-dashboard.html" class="flex flex-col items-center justify-center gap-1 p-2 w-16 text-primary">
             <span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">home</span>
+            <span class="text-[10px] font-medium">Home</span>
         </a>
-        <a class="flex flex-1 justify-center items-center gap-2 px-2 py-2.5 rounded-full text-slate-400 hover:text-white hover:bg-white/5 transition-all group"
-            href="#">
-            <span class="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">explore</span>
+        <a href="#" class="flex flex-col items-center justify-center gap-1 p-2 w-16 text-slate-400 hover:text-white transition-colors">
+            <span class="material-symbols-outlined text-[24px]">explore</span>
+            <span class="text-[10px] font-medium">Explore</span>
         </a>
-        <a class="flex flex-1 justify-center items-center gap-2 px-2 py-2.5 rounded-full text-slate-400 hover:text-white hover:bg-white/5 transition-all group relative"
-            href="#">
+        <a href="notification.html" class="flex flex-col items-center justify-center gap-1 p-2 w-16 text-slate-400 hover:text-white transition-colors relative">
             <div class="relative">
-                <span
-                    class="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">notifications</span>
-                <span
-                    class="absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-[#0f111a] animate-pulse"></span>
+                <span class="material-symbols-outlined text-[24px]">notifications</span>
+                <span id="notif-badge-mobile" class="hidden absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-background-dark animate-pulse"></span>
             </div>
+            <span class="text-[10px] font-medium">Notifications</span>
         </a>
-        <a class="flex flex-1 justify-center items-center gap-2 px-2 py-2.5 rounded-full text-slate-400 hover:text-white hover:bg-white/5 transition-all group"
-            href="#">
-            <span class="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">mail</span>
+        <a href="profile.html" class="flex flex-col items-center justify-center gap-1 p-2 w-16 text-slate-400 hover:text-white transition-colors">
+            <span class="material-symbols-outlined text-[24px]">person</span>
+            <span class="text-[10px] font-medium">Profile</span>
         </a>
     </nav>
     <script>
-        // Toast Function
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            
-            // Icon selection
-            let icon = 'check_circle';
-            let bgClass = 'bg-background-dark/90 border-primary/50';
-            let textClass = 'text-primary';
-            
-            if (type === 'error') {
-                icon = 'error';
-                bgClass = 'bg-background-dark/90 border-red-500/50';
-                textClass = 'text-red-500';
-            }
-
-            toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl border ${bgClass} shadow-2xl backdrop-blur-md transform translate-x-full transition-all duration-300 pointer-events-auto min-w-[300px]`;
-            toast.innerHTML = `
-                <span class="material-symbols-outlined ${textClass}">${icon}</span>
-                <p class="text-sm font-medium text-white">${message}</p>
-            `;
-
-            container.appendChild(toast);
-
-            // Animate In
-            requestAnimationFrame(() => {
-                toast.classList.remove('translate-x-full');
-            });
-
-            // Remove after 4s
-            setTimeout(() => {
-                toast.classList.add('translate-x-full', 'opacity-0');
-                setTimeout(() => {
-                    toast.remove();
-                }, 300);
-            }, 4000);
-        }
-
         const API_BASE_URL = 'http://127.0.0.1:8000/api';
         const PUBLIC_URL = 'http://127.0.0.1:8000';
         const token = localStorage.getItem('auth_token');
         const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
+        window.currentUserData = userData; // Fix for post_utils.js reference
         if (!token) window.location.href = 'login.html';
+    </script>
+    <script src="js/post_utils.js"></script>
+    <script src="js/notifications.js"></script>
+    <script>
+        // Global Fetch Interceptor for Token Expiration (401)
+        const originalFetch = window.fetch;
+        window.fetch = async function (...args) {
+            try {
+                const response = await originalFetch(...args);
+                if (response.status === 401) {
+                    // Token expired or invalid
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user_data');
+                    window.location.href = 'login.html';
+                }
+                return response;
+            } catch (error) {
+                if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+                    // Check if showToast is available (from post_utils.js)
+                    if (typeof showToast === 'function') {
+                        showToast('Cannot connect to server. Is the backend running?', 'error');
+                    }
+                }
+                throw error;
+            }
+        };
+
         // Header Init
         if (userData.name) {
-            document.getElementById('header-user-avatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=random`;
-            document.getElementById('create-post-avatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=random`;
+            const initialsUrl = DEFAULT_AVATAR(userData.name);
+            const avatarUrl = getAvatarUrl(userData) || initialsUrl;
+            
+            const headerAvatar = document.getElementById('header-user-avatar');
+            const createPostAvatar = document.getElementById('create-post-avatar');
+            
+            if(headerAvatar) {
+                headerAvatar.src = avatarUrl;
+                headerAvatar.onerror = function() {
+                    this.onerror = null;
+                    this.src = initialsUrl;
+                };
+            }
+            
+            const headerName = document.getElementById('header-user-name');
+            const headerHandle = document.getElementById('header-user-handle');
+            if (headerName) headerName.innerText = userData.name;
+            if (headerHandle) headerHandle.innerText = '@' + userData.name.toLowerCase().replace(/\s+/g, '');
+
+            if(createPostAvatar) {
+                createPostAvatar.src = avatarUrl;
+                createPostAvatar.onerror = function() {
+                    this.onerror = null;
+                    this.src = initialsUrl;
+                };
+                // Add click to view profile - ONLY on the avatar, not the parent container
+                createPostAvatar.style.cursor = 'pointer';
+                createPostAvatar.onclick = (e) => {
+                    e.stopPropagation();
+                    window.location.href = 'profile.html';
+                };
+            }
         }
-        document.getElementById('logout-btn').addEventListener('click', () => {
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('user_data');
-            window.location.href = 'login.html';
-        });
+
 
         // Post Creation
         const postImageInput = document.getElementById('post-image-input');
@@ -578,9 +585,15 @@
         postFileInput.addEventListener('change', handleFileSelect);
 
         document.getElementById('create-post-btn').addEventListener('click', async () => {
+            console.log("Post button clicked"); 
             const content = document.getElementById('create-post-content').value;
             const btn = document.getElementById('create-post-btn');
-            if (!content && selectedFiles.length === 0) return;
+            
+            if (!content && selectedFiles.length === 0) {
+                console.warn("Content empty, aborting post");
+                // Optional: showToast("Type something...", "error");
+                return;
+            }
             btn.disabled = true;
             btn.textContent = 'Posting...';
             
@@ -622,50 +635,7 @@
             }
         });
 
-        // Search
-        const searchInput = document.getElementById('search-input');
-        const searchResults = document.getElementById('search-results-container');
-        let searchTimeout;
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            const query = e.target.value.trim();
-            if (query.length === 0) {
-                searchResults.classList.add('hidden');
-                return;
-            }
-            searchTimeout = setTimeout(async () => {
-                try {
-                    const response = await fetch(`${API_BASE_URL}/search_user`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            search: query
-                        })
-                    });
-                    const data = await response.json();
-                    searchResults.innerHTML = '';
-                    searchResults.classList.remove('hidden');
-                    const users = data.data && data.data.items ? data.data.items : [];
-                    if (users.length > 0) {
-                        users.forEach(user => {
-                            const div = document.createElement('div');
-                            div.className = 'flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors';
-                            div.onclick = () => window.location.href = `profile.html?id=${user.id}`;
-                            div.innerHTML = ` <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}" class="w-8 h-8 rounded-full"> <span class="text-white text-sm font-medium">${user.name}</span> `;
-                            searchResults.appendChild(div);
-                        });
-                    } else {
-                        searchResults.innerHTML = '<div class="text-slate-500 text-sm p-2">No users found.</div>';
-                    }
-                } catch (e) {
-                    console.error(e);
-                }
-            }, 300);
-        });
+        // Search Logic is now handled by post_utils.js using #global-search-input
 
         // Load Posts
         async function loadPosts() {
@@ -715,492 +685,14 @@
             }
         }
 
-        function createPostHTML(post) {
-            const user = post.user || {
-                name: 'Unknown',
-                id: 0
-            };
-            const safeName = user.name || 'Unknown';
-            const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(safeName)}&background=random`;
-            const timeAgo = new Date(post.created_at).toLocaleDateString();
-            
-            // Check if liked (from backend)
-            // withExists returns boolean true/false or 1/0
-            const isLiked = !!post.is_liked; 
-            
-            // Style Logic
-            // Liked: Pink text + Filled Heart
-            // Unliked: Slate text + Outlined Heart
-            const likeColorClass = isLiked ? 'text-pink-500' : 'text-slate-400';
-            const likeFill = isLiked ? 1 : 0;
-            const likeAnimation = isLiked ? '' : ''; // Optional initial class
-
-            let mediaHTML = '';
-            if (post.attachments && post.attachments.length > 0) {
-                const files = Array.isArray(post.attachments) ? post.attachments : [];
-                if (files.length > 0) {
-                    const file = files[0];
-                    let src = '';
-                    if (typeof file === 'object' && file.file_path) src = `${PUBLIC_URL}/${file.file_path}`;
-                    else if (typeof file === 'string') src = `${PUBLIC_URL}/posts/${file}`;
-                    if (src) {
-                        mediaHTML = ` <div class="mt-4 rounded-2xl overflow-hidden border border-glass-border"> <img class="w-full object-cover max-h-[400px]" src="${src}"> </div>`;
-                    }
-                }
-            }
-            
-            // Safeguard body to avoid 'undefined' text
-            const safeBody = post.body || '';
-            const likeCount = post.like_count || 0;
-            const commentCount = post.comments_count || 0;
-
-            return ` <article class="glass-card rounded-3xl p-0 overflow-hidden group/post transition-transform duration-300 hover:translate-y-[-2px]"> 
-            <div class="p-6"> 
-                <!-- Header --> 
-                <div class="flex items-start justify-between mb-4"> 
-                    <div class="flex items-center gap-3"> 
-                        <div onclick="window.location.href='profile.html?id=${user.id}'" class="relative cursor-pointer"> 
-                            <img class="w-12 h-12 rounded-full object-cover border-2 border-glass-border hover:border-primary transition-colors" src="${avatarUrl}"/> 
-                        </div> 
-                        <div> 
-                            <h3 onclick="window.location.href='profile.html?id=${user.id}'" class="font-bold text-white hover:text-primary transition-colors cursor-pointer text-base">${safeName}</h3> 
-                            <div class="flex items-center text-xs text-slate-400 font-medium mt-0.5"> 
-                                <span>@user${user.id}</span> <span class="mx-1.5 opacity-50">•</span> <span>${timeAgo}</span> 
-                            </div> 
-                        </div> 
-                    </div> 
-                </div> 
-                <!-- Content --> 
-                <div class="mb-4 cursor-pointer" onclick="window.location.href='post-detail-veiw.html?id=${post.id}'"> 
-                    <p class="text-slate-300 leading-relaxed text-[15px]">${safeBody}</p> 
-                    ${mediaHTML} 
-                </div> 
-                <!-- Footer / Actions --> 
-                <div class="mt-4 pt-4 border-t border-glass-border flex items-center justify-between"> 
-                    <div class="flex gap-4"> 
-                        <div class="flex items-center gap-1">
-                            <button id="like-btn-${post.id}" onclick="likePost(${post.id}, this)" class="flex items-center gap-2 ${likeColorClass} hover:text-pink-500 transition-colors group/like"> 
-                                <span class="material-symbols-outlined text-[22px] transition-transform group-active/like:scale-75" style="font-variation-settings: 'FILL' ${likeFill};">favorite</span> 
-                                <span class="text-xs font-medium">Like</span> 
-                            </button> 
-                             <span onclick="openLikersModal(${post.id})" class="text-xs text-slate-400 font-medium hover:text-white cursor-pointer ml-1">${likeCount > 0 ? likeCount : ''}</span>
-                        </div>
-                        
-                        <div class="flex items-center gap-1">
-                            <button onclick="toggleCommentSection(${post.id})" class="flex items-center gap-2 text-slate-400 hover:text-blue-500 transition-colors"> 
-                                <span class="material-symbols-outlined text-[20px]">chat_bubble</span> 
-                                <span class="text-xs font-medium">Comment</span> 
-                            </button> 
-                            <span class="text-xs text-slate-400 font-medium ml-1">${commentCount > 0 ? commentCount : ''}</span>
-                        </div>
-                    </div> 
-                </div> 
-            </div> 
-            
-            <!-- Inline Comment Section (Hidden by default) -->
-            <div id="comment-section-${post.id}" class="hidden px-6 pb-6 pt-2 border-t border-glass-border/50 bg-black/20">
-                <!-- Fetched Comments List -->
-                <div id="comment-list-${post.id}" class="flex flex-col gap-3 mb-4 max-h-60 overflow-y-auto custom-scrollbar"></div>
-
-                <div class="flex gap-3 items-start animate-fade-in-down">
-                     <!-- Current User Avatar (Mini) -->
-                     <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name || 'Me')}&background=random" class="w-8 h-8 rounded-full border border-glass-border mt-1">
-                     <!-- Input Area -->
-                     <div class="flex-1">
-                        <textarea id="comment-input-${post.id}" class="w-full bg-white/5 border border-glass-border rounded-xl p-3 text-sm text-slate-300 focus:outline-none focus:border-primary/50 transition-all resize-none h-20 placeholder:text-slate-500" placeholder="Write a comment..."></textarea>
-                        <div class="flex justify-end mt-2">
-                             <button onclick="submitComment(${post.id})" class="px-4 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1">
-                                <span>Post</span>
-                                <span class="material-symbols-outlined text-[14px]">send</span>
-                             </button>
-                        </div>
-                     </div>
-                </div>
-            </div>
-            </article> `;
-        }
-        
-        async function toggleCommentSection(postId) {
-            const section = document.getElementById(`comment-section-${postId}`);
-            const list = document.getElementById(`comment-list-${postId}`);
-            
-            section.classList.toggle('hidden');
-            
-            if(!section.classList.contains('hidden')) {
-                // Focus input
-                 setTimeout(() => {
-                    const input = document.getElementById(`comment-input-${postId}`);
-                    if(input) input.focus();
-                 }, 50);
-                 
-                 // Fetch comments
-                 list.innerHTML = '<div class="text-xs text-slate-400 text-center py-2">Loading comments...</div>';
-                 
-                 try {
-                     const response = await fetch(`${API_BASE_URL}/get_comment`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ post_id: postId, limit: 20 })
-                     });
-                     const data = await response.json();
-                     
-                     if(data.success && data.data && data.data.items.length > 0) {
-                         list.innerHTML = data.data.items.map(comment => {
-                             const user = comment.user || { name: 'Unknown', id: 0 };
-                             const isLiked = comment.is_liked || false;
-                             const likeCount = comment.like_count || 0;
-                             const likeColorClass = isLiked ? 'text-pink-500' : 'text-slate-400';
-                             const likeFill = isLiked ? 1 : 0;
-
-                             // Render Replies
-                             let repliesHTML = '';
-                             if(comment.replies && comment.replies.length > 0) {
-                                 repliesHTML = '<div class="mt-2 pl-8 flex flex-col gap-2 border-l-2 border-glass-border/30 ml-2">';
-                                 repliesHTML += comment.replies.map(reply => {
-                                     const replyUser = reply.creator || { name: 'Unknown', id: 0 };
-                                     const replyIsLiked = reply.is_liked || false;
-                                     const replyLikeCount = reply.like_count || 0;
-                                     const rLikeColor = replyIsLiked ? 'text-pink-500' : 'text-slate-400';
-                                     const rLikeFill = replyIsLiked ? 1 : 0;
-                                     
-                                     return `
-                                        <div class="flex gap-3 items-start animate-fade-in-down group/reply">
-                                            <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(replyUser.name)}&background=random" class="w-6 h-6 rounded-full border border-glass-border cursor-pointer" onclick="window.location.href='profile.html?id=${replyUser.id}'">
-                                            <div class="flex-1">
-                                                <div class="bg-white/5 rounded-xl p-2 px-3 border border-glass-border/30">
-                                                    <div class="flex justify-between items-start mb-0.5">
-                                                        <h4 class="font-bold text-white text-[11px] cursor-pointer hover:underline" onclick="window.location.href='profile.html?id=${replyUser.id}'">${replyUser.name}</h4>
-                                                        <span class="text-[9px] text-slate-500">${new Date(reply.created_at).toLocaleDateString()}</span>
-                                                    </div>
-                                                    <p class="text-slate-300 text-xs whitespace-pre-wrap">${reply.reply}</p>
-                                                </div>
-                                                <div class="flex items-center gap-3 mt-1 ml-2">
-                                                    <button onclick="likeReply(${reply.id}, this)" class="flex items-center gap-1 text-[10px] font-medium ${rLikeColor} hover:text-pink-500 transition-colors">
-                                                        <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' ${rLikeFill}">favorite</span>
-                                                        <span>${replyLikeCount > 0 ? replyLikeCount : 'Like'}</span>
-                                                    </button>
-                                                    <button onclick="toggleReplyInput(${comment.id}, '@${replyUser.name} ')" class="flex items-center gap-1 text-[10px] font-medium text-slate-400 hover:text-white transition-colors">
-                                                        <span class="material-symbols-outlined text-[14px]">reply</span>
-                                                        <span>Reply</span>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                     `;
-                                 }).join('');
-                                 repliesHTML += '</div>';
-                             }
-
-                             return `
-                                <div class="flex gap-3 items-start animate-fade-in-down group/comment">
-                                    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random" class="w-8 h-8 rounded-full border border-glass-border cursor-pointer" onclick="window.location.href='profile.html?id=${user.id}'">
-                                    <div class="flex-1">
-                                        <div class="bg-white/5 rounded-xl p-3 border border-glass-border/30">
-                                            <div class="flex justify-between items-start mb-1">
-                                                <h4 class="font-bold text-white text-xs cursor-pointer hover:underline" onclick="window.location.href='profile.html?id=${user.id}'">${user.name}</h4>
-                                                <span class="text-[10px] text-slate-500">${new Date(comment.created_at).toLocaleDateString()}</span>
-                                            </div>
-                                            <p class="text-slate-300 text-sm whitespace-pre-wrap">${comment.comment}</p>
-                                        </div>
-                                        
-                                        <!-- Actions -->
-                                        <div class="flex items-center gap-4 mt-1 ml-2">
-                                            <button onclick="likeComment(${comment.id}, this)" class="flex items-center gap-1 text-xs font-medium ${likeColorClass} hover:text-pink-500 transition-colors">
-                                                <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' ${likeFill}">favorite</span>
-                                                <span>${likeCount > 0 ? likeCount : 'Like'}</span>
-                                            </button>
-                                            <button onclick="toggleReplyInput(${comment.id})" class="flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-white transition-colors">
-                                                <span class="material-symbols-outlined text-[16px]">reply</span>
-                                                <span>Reply</span>
-                                            </button>
-                                        </div>
-
-                                        <!-- Nested Replies -->
-                                        ${repliesHTML}
-
-                                        <!-- Reply Input -->
-                                        <div id="reply-box-${comment.id}" class="hidden mt-2 flex gap-2 items-start ml-2">
-                                             <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name || 'Me')}&background=random" class="w-6 h-6 rounded-full border border-glass-border mt-1">
-                                             <div class="flex-1">
-                                                <textarea id="reply-input-${comment.id}" class="w-full bg-white/5 border border-glass-border rounded-lg p-2 text-xs text-slate-300 focus:outline-none focus:border-primary/50 transition-all resize-none h-16 placeholder:text-slate-500" placeholder="Write a reply..."></textarea>
-                                                <div class="flex justify-end mt-1">
-                                                     <button onclick="submitReply(${comment.id})" class="px-3 py-1 bg-primary text-white text-[10px] font-bold rounded-md hover:bg-blue-600 transition-colors">Pop Reply</button>
-                                                </div>
-                                             </div>
-                                        </div>
-                                    </div>
-                                </div>
-                             `;
-                         }).join('');
-                     } else {
-                         list.innerHTML = '<div class="text-xs text-slate-500 text-center py-2">No comments yet.</div>';
-                     }
-                 } catch(e) {
-                     console.error(e);
-                     list.innerHTML = '<div class="text-xs text-red-400 text-center py-2">Failed to load comments.</div>';
-                 }
-            }
-        }
-        
-        // --- Comment Actions ---
-
-        function toggleReplyInput(commentId, mention = '') {
-            const box = document.getElementById(`reply-box-${commentId}`);
-            const input = document.getElementById(`reply-input-${commentId}`);
-            
-            box.classList.remove('hidden');
-            
-            if(mention) {
-                input.value = mention;
-            }
-            
-            setTimeout(() => {
-                input.focus();
-                // Move cursor to end if mentioning
-                if(mention) input.setSelectionRange(input.value.length, input.value.length);
-            }, 50);
-        }
-
-        async function likeComment(commentId, btn) {
-            const icon = btn.querySelector('.material-symbols-outlined');
-            const bgClass = btn.classList.contains('text-pink-500');
-            const countSpan = btn.querySelector('span:last-child');
-            let count = parseInt(countSpan.innerText) || 0;
-
-            // Optimistic Update
-            if (bgClass) {
-                btn.classList.remove('text-pink-500');
-                btn.classList.add('text-slate-400');
-                icon.style.fontVariationSettings = "'FILL' 0";
-                count = Math.max(0, count - 1);
-            } else {
-                btn.classList.add('text-pink-500');
-                btn.classList.remove('text-slate-400');
-                icon.style.fontVariationSettings = "'FILL' 1";
-                count++;
-            }
-            countSpan.innerText = count > 0 ? count : 'Like';
-
-            try {
-                await fetch(`${API_BASE_URL}/add_reaction_to_comment`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ comment_id: commentId, type: 1 })
-                });
-            } catch (e) {
-                console.error(e); // Silent fail or revert
-            }
-        }
-
-        async function likeReply(replyId, btn) {
-            const icon = btn.querySelector('.material-symbols-outlined');
-            const bgClass = btn.classList.contains('text-pink-500');
-            const countSpan = btn.querySelector('span:last-child');
-            let count = parseInt(countSpan.innerText) || 0;
-
-            // Optimistic Update
-            if (bgClass) {
-                btn.classList.remove('text-pink-500');
-                btn.classList.add('text-slate-400');
-                icon.style.fontVariationSettings = "'FILL' 0";
-                count = Math.max(0, count - 1);
-            } else {
-                btn.classList.add('text-pink-500');
-                btn.classList.remove('text-slate-400');
-                icon.style.fontVariationSettings = "'FILL' 1";
-                count++;
-            }
-            countSpan.innerText = count > 0 ? count : 'Like';
-            
-            try {
-                await fetch(`${API_BASE_URL}/add_reaction_to_comment_reply`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ comment_reply_id: replyId, type: 1 })
-                });
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        async function submitReply(commentId) {
-            const input = document.getElementById(`reply-input-${commentId}`);
-            const content = input.value.trim();
-            if(!content) return;
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/create_comment_reply`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ comment_id: commentId, reply: content })
-                });
-                const data = await response.json();
-                if(response.status === 200 || response.status === 202) {
-                     input.value = '';
-                     toggleReplyInput(commentId);
-                     showToast('Reply posted! ↩️');
-                } else {
-                     showToast(data.message || 'Failed to reply', 'error');
-                }
-            } catch(e) {
-                 console.error(e);
-                 showToast('Error replying', 'error');
-            }
-        }
-        
-        async function submitComment(postId) {
-             const input = document.getElementById(`comment-input-${postId}`);
-             const content = input.value.trim();
-             if(!content) return;
-
-             try {
-                 const response = await fetch(`${API_BASE_URL}/create_comment`, {
-                     method: 'POST',
-                     headers: {
-                          'Authorization': `Bearer ${token}`,
-                          'Content-Type': 'application/json'
-                     },
-                     body: JSON.stringify({
-                         post_id: postId,
-                         comment: content
-                     })
-                 });
-                 
-                 const data = await response.json();
-                 
-                 if(data.success) {
-                     input.value = '';
-                     showToast('Comment posted! 💬');
-                     toggleCommentSection(postId); // Close on success
-                     loadPosts(); // Reload to update counts
-                 } else {
-                     showToast(data.message || 'Failed to post comment', 'error');
-                 }
-             } catch(e) {
-                 console.error(e);
-                 showToast('Error posting comment', 'error');
-             }
-        }
-
-        async function likePost(id, btn) {
-            // Optimistic Toggle logic
-            const icon = btn.querySelector('.material-symbols-outlined');
-            const isLiked = btn.classList.contains('text-pink-500');
-            const countSpan = btn.nextElementSibling;
-            let currentCount = parseInt(countSpan.innerText) || 0;
-            
-            if (isLiked) {
-                // Unlike: Remove Pink, go back to Slate, Emtpy Heart
-                btn.classList.remove('text-pink-500');
-                btn.classList.add('text-slate-400');
-                icon.style.fontVariationSettings = "'FILL' 0";
-                if(currentCount > 0) countSpan.innerText = currentCount - 1 || '';
-            } else {
-                // Like: Add Pink, Filled Heart, Animation
-                btn.classList.remove('text-slate-400');
-                btn.classList.add('text-pink-500');
-                icon.style.fontVariationSettings = "'FILL' 1";
-                countSpan.innerText = currentCount + 1;
-                
-                // Animation
-                icon.classList.add('animate-like-bounce');
-                setTimeout(() => icon.classList.remove('animate-like-bounce'), 500);
-            }
-
-            try {
-                // Backend toggle (sending 1 matches existing 1 -> delete, else create)
-                await fetch(`${API_BASE_URL}/add_reaction_to_post`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        post_id: id,
-                        type: 1 
-                    })
-                });
-            } catch (e) {
-                console.error(e);
-                // Revert visual state on error
-                if(isLiked) {
-                    // Was liked, we tried to unlike but failed -> make it liked again
-                     btn.classList.add('text-pink-500');
-                     btn.classList.remove('text-slate-400');
-                     icon.style.fontVariationSettings = "'FILL' 1";
-                     countSpan.innerText = currentCount;
-                } else {
-                    // Was unliked, tried to like but failed -> make it unliked again
-                     btn.classList.remove('text-pink-500');
-                     btn.classList.add('text-slate-400');
-                     icon.style.fontVariationSettings = "'FILL' 0";
-                     countSpan.innerText = currentCount;
-                }
-            }
-        }
-        
-        let likersModalOpen = false;
-        async function openLikersModal(postId) {
-             const modal = document.getElementById('likers-modal');
-             const list = document.getElementById('likers-list');
-             modal.classList.remove('hidden');
-             setTimeout(() => modal.firstElementChild.classList.remove('scale-95', 'opacity-0'), 10);
-             likersModalOpen = true;
-             
-             list.innerHTML = '<div class="flex justify-center py-8"><div class="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div></div>';
-
-             try {
-                const response = await fetch(`${API_BASE_URL}/get_post_reactions`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ post_id: postId })
-                });
-                const data = await response.json();
-                
-                if(data.success && data.data && data.data.items.length > 0) {
-                     list.innerHTML = data.data.items.map(user => {
-                        if(!user) return '';
-                        return `
-                        <div class="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer" onclick="window.location.href='profile.html?id=${user.id}'">
-                            <div class="flex items-center gap-3">
-                                <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=random" class="w-10 h-10 rounded-full border border-glass-border">
-                                <div>
-                                    <h4 class="font-bold text-white text-sm">${user.name || 'Unknown User'}</h4>
-                                    <p class="text-xs text-slate-400">@user${user.id}</p>
-                                </div>
-                            </div>
-                        </div>
-                     `}).join('');
-                } else {
-                    list.innerHTML = '<div class="text-center text-slate-500 py-8">No likes yet.</div>';
-                }
-             } catch(e) {
-                 console.error(e);
-                 list.innerHTML = '<div class="text-center text-red-400 py-8">Failed to load.</div>';
-             }
-        }
-
-        function closeLikersModal() {
-            const modal = document.getElementById('likers-modal');
-            modal.firstElementChild.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => modal.classList.add('hidden'), 200);
-            likersModalOpen = false;
-        }
-    </script>
-    
+</script>
     <!-- Likers Modal -->
     <div id="likers-modal" class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden p-4">
         <div class="glass-panel w-full max-w-sm rounded-2xl transform transition-all duration-300 scale-95 opacity-0 flex flex-col max-h-[80vh]">
             <div class="p-4 border-b border-glass-border flex justify-between items-center shrink-0">
                 <h3 class="font-bold text-white text-lg">Likes</h3>
                 <button onclick="closeLikersModal()" class="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors">
-                    <span class="material-symbols-outlined text-slate-400">close</span>
+                    <span class="material-symbols-outlined text-gray-400">close</span>
                 </button>
             </div>
             <div id="likers-list" class="p-2 overflow-y-auto custom-scrollbar flex-1">
@@ -1209,11 +701,8 @@
         </div>
     </div>
 
-    <script>
-        document.getElementById('likers-modal').addEventListener('click', (e) => {
-             if(e.target === document.getElementById('likers-modal')) closeLikersModal();
-        });
 
+    <script>
         loadPosts();
     </script>
 </body>
