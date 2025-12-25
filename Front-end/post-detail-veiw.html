@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>SocialApp - Post Detail</title>
+    <title>Post Detail</title>
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
@@ -95,7 +95,7 @@
                     <span class="material-symbols-outlined text-[26px]">token</span>
                 </div>
                 <div class="hidden md:flex flex-col">
-                    <span class="text-xl font-bold tracking-tight text-white leading-none">Social</span>
+                    <span id="site-logo-text" class="text-xl font-bold tracking-tight text-white leading-none"></span>
                     <span
                         class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest leading-none mt-1">Detail
                         View</span>
@@ -299,6 +299,7 @@
         // The post_utils.js calls toggleCommentSection(postId) on success which refreshes the list
         // but we might want to keep the section open.
     </script>
+    <script src="js/site_branding.js"></script>
 </body>
 
 </html>

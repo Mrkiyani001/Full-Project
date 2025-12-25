@@ -19,8 +19,9 @@ class PostController extends BaseController
     public function create(Request $request)
     {
         $this->validateRequest($request, [
-            'title' => 'required|string|max:255',
-            'body' => 'required|string',
+            'original_post_id' => 'nullable|exists:post,id', // For retweet Function 
+            'title' => 'required|string|max:255', 
+            'body' => 'nullable|string|required_without:original_post_id',
             'attachments' => 'nullable|array',
             'attachments.*' => 'nullable|file|mimes:jpg,jpeg,png,gif,mp4,avi,mov,pdf,doc,docx|max:51200',
         ]);
@@ -51,16 +52,10 @@ class PostController extends BaseController
                 $request->title,
                 $request->body,
                 $attachments,
-                $is_approved
+                $is_approved,
+                $request->original_post_id
             );
-            SendNotification::dispatch(
-                $user->id,
-                'New Post',
-                $user->name . ' created a new post.',
-                $user->id,
-                $user, // Notifiable is the User model
-                'Y'
-            );
+
             return response()->json([
                 'success' => true,
                 'message' => 'Post creation in progress',
@@ -218,7 +213,7 @@ class PostController extends BaseController
             if (!$user) {
                 return $this->unauthorized();
             }
-            $posts = Post::with('attachments', 'creator', 'updator', 'user.profile.avatar')
+            $posts = Post::with('attachments', 'creator', 'updator', 'user.profile.avatar', 'originalPost.creator', 'originalPost.attachments')
                 ->withExists(['reactions as is_liked' => function ($q) use ($user) {
                     $q->where('created_by', $user->id)->where('type', 1);
                 }])
@@ -226,6 +221,7 @@ class PostController extends BaseController
                     $q->where('type', 1);
                 }])
                 ->withCount('comments')
+                ->withCount('shares')
                 ->orderby('created_at', 'desc')
                 ->paginate($limit);
 
@@ -346,7 +342,7 @@ class PostController extends BaseController
                 // My Profile: Show ALL posts (Pending, Approved, Rejected)
                 $posts = Post::withoutGlobalScopes()
                     ->where('user_id', $request->user_id)
-                    ->with('attachments', 'creator', 'updator', 'user.profile.avatar')
+                    ->with('attachments', 'creator', 'updator', 'user.profile.avatar', 'originalPost.creator', 'originalPost.attachments')
                     ->withExists(['reactions as is_liked' => function ($q) use ($user) {
                         $q->where('created_by', $user->id)->where('type', 1);
                     }])
@@ -354,6 +350,7 @@ class PostController extends BaseController
                         $q->where('type', 1);
                     }])
                     ->withCount('comments')
+                    ->withCount('shares')
                     ->orderby('created_at', 'desc')
                     ->paginate($limit);
             }
@@ -362,10 +359,12 @@ class PostController extends BaseController
                 $posts = Post::withoutGlobalScopes()
                     ->where('user_id', $request->user_id)
                     ->where('status', 1) // 1 = Approved
-                    ->with('attachments', 'creator', 'updator', 'user.profile.avatar')
+                    ->with('attachments', 'creator', 'updator', 'user.profile.avatar', 'originalPost.creator', 'originalPost.attachments')
                     ->withExists(['reactions as is_liked' => function ($q) use ($user) {
                         $q->where('created_by', $user->id)->where('type', 1);
                     }])
+                    ->withCount('comments')
+                    ->withCount('shares')
                     ->orderby('created_at', 'desc')
                     ->paginate($limit);
             }
@@ -400,7 +399,7 @@ class PostController extends BaseController
                 $q->where('created_by', $request->user_id)->where('type', 1);
             })
                 ->where('status', 1) // Only approved posts
-                ->with('attachments', 'creator', 'updator', 'user.profile.avatar')
+                ->with('attachments', 'creator', 'updator', 'user.profile.avatar', 'originalPost.creator', 'originalPost.attachments')
                 ->withExists(['reactions as is_liked' => function ($q) use ($user) {
                     $q->where('created_by', $user->id)->where('type', 1);
                 }])
@@ -408,6 +407,7 @@ class PostController extends BaseController
                     $q->where('type', 1);
                 }])
                 ->withCount('comments')
+                ->withCount('shares')
                 ->orderby('created_at', 'desc')
                 ->paginate($limit);
 

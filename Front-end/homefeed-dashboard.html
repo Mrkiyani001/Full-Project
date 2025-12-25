@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Home Feed - Social Network</title>
+    <title>Home Feed</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔥</text></svg>">
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
@@ -205,14 +205,13 @@
     </div>
     <header class="glass-nav fixed top-0 w-full z-50 h-[70px] md:h-[80px] flex items-center justify-between px-4 md:px-8 transition-all duration-300">
         <div class="flex items-center gap-3 cursor-pointer group select-none min-w-fit">
-            <div
-                class="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-primary to-blue-700 flex items-center justify-center text-white shadow-lg shadow-primary/20 group-hover:shadow-primary/40 group-hover:scale-105 transition-all duration-300">
-                <span class="material-symbols-outlined text-[22px] md:text-[26px]">token</span>
+            <div id="site-logo-img"
+                class="w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center group-hover:scale-105 transition-all duration-300 bg-cover bg-center bg-no-repeat overflow-hidden">
+                <!-- Fallback icon if bg image fails to load or script hasn't run yet -->
+                <span class="material-symbols-outlined text-[22px] md:text-[26px] text-white/80">token</span>
             </div>
             <div class="flex flex-col">
-                <span class="text-lg md:text-xl font-bold tracking-tight text-white leading-none">Social</span>
-                <span
-                    class="text-[9px] md:text-[10px] font-semibold text-slate-500 uppercase tracking-widest leading-none mt-1 hidden sm:block">Dashboard</span>
+                <span id="site-logo-text" class="text-xl md:text-2xl font-bold tracking-tight text-white leading-none ml-2"></span>
             </div>
         </div>
         <nav
@@ -326,9 +325,13 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Quote Preview (Corrected) -->
+                <div id="quote-preview-container" class="mt-4 hidden"></div>
+                <input type="hidden" id="original-post-id">
 
-                <!-- Preview Area -->
-                <div id="image-preview-container" class="hidden px-5 pb-3 grid grid-cols-2 gap-2"></div>
+                <!-- Image Preview -->
+                <div id="image-preview-container" class="grid grid-cols-2 gap-2 mt-4 hidden animate-fade-in"></div>
 
                 <!-- Emoji Picker Container -->
                 <div id="emoji-picker" class="hidden absolute top-full right-4 mt-2 w-64 glass-card rounded-xl p-3 z-50 grid grid-cols-6 gap-2 max-h-48 overflow-y-auto shadow-2xl border border-white/10">
@@ -559,7 +562,47 @@
         const postImageInput = document.getElementById('post-image-input');
         const postFileInput = document.getElementById('post-file-input');
         const imagePreviewContainer = document.getElementById('image-preview-container');
+        const quotePreviewContainer = document.getElementById('quote-preview-container'); // NEW
+        const originalPostIdInput = document.getElementById('original-post-id'); // NEW
         let selectedFiles = [];
+
+        // Expose global function for Quote Tweet
+        window.prepareRetweet = function(postData) {
+            originalPostIdInput.value = postData.id;
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Populate Preview
+            document.getElementById('create-post-content').focus();
+            document.getElementById('create-post-content').placeholder = "Add a comment...";
+            
+            quotePreviewContainer.innerHTML = `
+                <div class="relative bg-white/5 border border-white/10 rounded-xl p-4 flex gap-3 animate-fade-in group">
+                     <!-- Close Button -->
+                     <button onclick="window.cancelRetweet()" class="absolute top-2 right-2 p-1 rounded-full bg-black/40 hover:bg-white/20 text-white/50 hover:text-white transition-colors">
+                        <span class="material-symbols-outlined text-[16px]">close</span>
+                     </button>
+                     
+                     <div class="w-1 bg-purple-500 rounded-full"></div>
+                     <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="material-symbols-outlined text-purple-400 text-[18px]">repeat</span>
+                            <span class="text-xs font-bold text-purple-300">Reposting @${postData.username}</span>
+                        </div>
+                        <p class="text-sm text-slate-300 line-clamp-2">${postData.body || 'Media'}</p>
+                     </div>
+                </div>
+            `;
+            quotePreviewContainer.classList.remove('hidden');
+        };
+
+        window.cancelRetweet = function() {
+            originalPostIdInput.value = '';
+            quotePreviewContainer.innerHTML = '';
+            quotePreviewContainer.classList.add('hidden');
+            document.getElementById('create-post-content').placeholder = "What's on your mind?";
+        };
 
         function handleFileSelect(e) {
             const files = Array.from(e.target.files);
@@ -588,10 +631,11 @@
             console.log("Post button clicked"); 
             const content = document.getElementById('create-post-content').value;
             const btn = document.getElementById('create-post-btn');
+            const originalPostId = originalPostIdInput.value;
             
-            if (!content && selectedFiles.length === 0) {
-                console.warn("Content empty, aborting post");
-                // Optional: showToast("Type something...", "error");
+            // Check for empty content (allowed only for retweets)
+            if (!content && selectedFiles.length === 0 && !originalPostId) {
+                showToast("Please write something!", "error");
                 return;
             }
             btn.disabled = true;
@@ -602,7 +646,12 @@
             
             const formData = new FormData();
             formData.append('title', generatedTitle);
-            formData.append('body', content);
+            formData.append('body', content); // Can be empty string now
+            
+            if(originalPostId) {
+                formData.append('original_post_id', originalPostId);
+            }
+
             selectedFiles.forEach(file => formData.append('attachments[]', file));
             try {
                 const response = await fetch(`${API_BASE_URL}/create_post`, {
@@ -615,17 +664,26 @@
                 const data = await response.json();
                 if (data.success) {
                     document.getElementById('create-post-content').value = '';
-                    // Title input removed, so no value to clear
+                    // Reset Quote Tweet State
+                    window.cancelRetweet();
+                    
                     imagePreviewContainer.innerHTML = '';
                     imagePreviewContainer.classList.add('hidden');
                     selectedFiles = [];
                     
                     // Show success message
-                    showToast('Post created! It is under moderation.');
+                    showToast(originalPostId ? 'Reposted successfully! 🔄' : 'Post created! It is under moderation.');
                     
                     loadPosts(); // Refresh
                 } else {
-                    showToast('Error: ' + data.message, 'error');
+                    let msg = data.message || 'Error creating post';
+                    if (data.errors) {
+                         const firstErrorKey = Object.keys(data.errors)[0];
+                         if (firstErrorKey) {
+                             msg = data.errors[firstErrorKey][0];
+                         }
+                    }
+                    showToast(msg, 'error');
                 }
             } catch (e) {
                 console.error(e);
@@ -685,6 +743,37 @@
             }
         }
 
+        // Handle URL Params (e.g. ?repost=123)
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const repostId = urlParams.get('repost');
+            
+            if(repostId && typeof window.prepareRetweet === 'function') {
+                 try {
+                     const response = await fetch(`${API_BASE_URL}/get_post`, {
+                         method: 'POST',
+                         headers: { 
+                             'Authorization': `Bearer ${token}`,
+                             'Content-Type': 'application/json' 
+                         },
+                         body: JSON.stringify({ id: repostId })
+                     });
+                     const data = await response.json();
+                     if(data.success && data.data) {
+                         const post = data.data;
+                         const user = post.user || { name: 'Unknown' };
+                         window.prepareRetweet({
+                             id: post.id,
+                             username: user.name,
+                             body: post.body
+                         });
+                         // Clean URL
+                         window.history.replaceState({}, document.title, window.location.pathname);
+                     }
+                 } catch(e) { console.error("Error fetching repost data", e); }
+            }
+        });
+
 </script>
     <!-- Likers Modal -->
     <div id="likers-modal" class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden p-4">
@@ -705,5 +794,7 @@
     <script>
         loadPosts();
     </script>
+
+    <script src="js/site_branding.js"></script>
 </body>
 </html>

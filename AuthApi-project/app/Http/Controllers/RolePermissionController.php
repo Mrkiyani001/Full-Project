@@ -57,7 +57,7 @@ class RolePermissionController extends BaseController
     } 
     public function assign_role(Request $request){
             $this->validateRequest($request, [
-            'role' => 'required',
+            'role' => 'present|array',
             'user_id' => 'required|integer|exists:users,id',
             ]);
         try{
@@ -65,10 +65,16 @@ class RolePermissionController extends BaseController
             if (!$user) {
                 return $this->unauthorized();
             }
-            $user = User::findOrFail($request->user_id);
+            $targetUser = User::findOrFail($request->user_id);
+            
+            $roles = $request->role;
+            if (empty($roles)) {
+                $roles = ['user'];
+            }
+
             // syncRoles accepts string or array
-            $user->syncRoles($request->role);
-            return $this->response(true, 'Roles synced successfully', $user, 200);
+            $targetUser->syncRoles($roles);
+            return $this->response(true, 'Roles synced successfully', $targetUser, 200);
         }catch(\Exception $e){
             Log::error("Error assigning role: ".$e->getMessage());
             return $this->Response(false, $e->getMessage(), null, 500);

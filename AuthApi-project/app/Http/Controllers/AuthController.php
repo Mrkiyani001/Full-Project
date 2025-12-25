@@ -78,6 +78,17 @@ class AuthController extends BaseController
                 ], 403);
             }
 
+            // Check Maintenance Mode
+            $settings = \App\Models\Settings::first();
+            if ($settings && $settings->maintenance_mode) {
+                if (!$user->hasRole('super admin') && !$user->hasRole('admin')) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Service Unavailable. The site is currently in maintenance mode.',
+                    ], 503);
+                }
+            }
+
             if (!$token = auth('api')->login($user)) {
                 return response()->json([
                     'success' => false,
@@ -127,13 +138,50 @@ class AuthController extends BaseController
     {
         try {
             $limit = (int) $request->input('limit', 10);
-            $user = auth('api')->user();
-            if (!$user) {
-                return $this->unauthorized();
-            }
-            $users = User::with('roles')->paginate($limit);
+            $query = User::with(['roles', 'profile']);
 
+            $users = $query->latest()->paginate($limit);
             $data = $this->paginateData($users, $users->items());
+
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function filter_users(Request $request)
+    {
+        try {
+            $limit = (int) $request->input('limit', 10);
+            $query = User::with(['roles', 'profile']);
+
+            // Filter logic
+            if ($request->has('filter') && !empty($request->filter)) {
+                $filter = $request->filter;
+                if ($filter === 'banned') {
+                    $query->where('is_banned', 1);
+                } elseif ($filter === 'active') {
+                    $query->where('is_banned', 0);
+                } elseif ($filter === 'admins') {
+                    $query->whereHas('roles', function ($q) {
+                        $q->whereIn('name', ['admin', 'super-admin', 'super admin']);
+                    });
+                } elseif ($filter === 'moderators') {
+                    $query->whereHas('roles', function ($q) {
+                        $q->where('name', 'moderator');
+                    });
+                }
+            }
+
+            $users = $query->latest()->paginate($limit);
+            $data = $this->paginateData($users, $users->items());
+
             return response()->json([
                 'success' => true,
                 'data' => $data,
@@ -284,7 +332,12 @@ class AuthController extends BaseController
             if (!$user) {
                 return $this->unauthorized();
             }
-            $users = User::where('name', 'like', '%' . $request->search . '%')->paginate($limit);
+            $search = $request->search;
+            $users = User::with(['roles', 'profile'])
+                ->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%");
+                })
+                ->paginate($limit);
             $data = $this->paginateData($users, $users->items());
             return response()->json([
                 'success' => true,

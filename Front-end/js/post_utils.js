@@ -2,7 +2,8 @@
 // Post Interaction Utilities
 // Requires: API_BASE_URL, token, PUBLIC_URL, currentUserData (or userData) to be defined globally
 
-const DEFAULT_AVATAR = (name) => `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=random`;
+const DEFAULT_AVATAR = window.DEFAULT_AVATAR || ((name) => `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=random`);
+if (!window.DEFAULT_AVATAR) window.DEFAULT_AVATAR = DEFAULT_AVATAR;
 
 function getAvatarUrl(user) {
     if (user && user.profile && user.profile.avatar && user.profile.avatar.file_path) {
@@ -54,7 +55,30 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// Global Search Logic
+// Inject Report Modal
+document.body.insertAdjacentHTML('beforeend', `
+<div id="report-modal" class="fixed inset-0 z-[60] hidden">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeReportModal()"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-[#1e2330] border border-white/10 rounded-2xl shadow-2xl p-6">
+        <h3 class="text-lg font-bold text-white mb-4">Report Content</h3>
+        <p class="text-sm text-slate-400 mb-4">Why are you reporting this?</p>
+        
+        <div class="space-y-2 mb-6">
+            <textarea id="report-reason-input" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-slate-300 focus:outline-none focus:border-primary/50 transition-all resize-none h-32 placeholder:text-slate-500" placeholder="Please describe the issue with this content..."></textarea>
+        </div>
+
+        <input type="hidden" id="report-target-id">
+        <input type="hidden" id="report-target-type">
+
+        <div class="flex gap-3 justify-end">
+            <button onclick="closeReportModal()" class="px-4 py-2 text-slate-400 font-bold hover:text-white transition-colors">Cancel</button>
+            <button onclick="submitReport()" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-500/20">Submit Report</button>
+        </div>
+    </div>
+</div>
+`);
+
+// Shared Logic for Posts
 async function setupGlobalSearch() {
     const searchInput = document.getElementById('global-search-input');
     if (!searchInput) return;
@@ -370,8 +394,10 @@ function createPostHTML(post) {
     const cardClass = "glass-panel rounded-2xl shadow-xl overflow-hidden p-0 transition-transform duration-300 hover:translate-y-[-2px] mb-6";
 
     return `
+
     <article class="${cardClass}">
         <div class="p-6">
+            ${renderRetweetHeader(post, user)}
             <div class="flex gap-4">
                 ${renderAvatarHTML(user, "size-10 rounded-full border border-white/10 cursor-pointer object-cover", `onclick="window.location.href='profile.html?id=${user.id}'"`)}
                 <div class="flex-1">
@@ -384,10 +410,22 @@ function createPostHTML(post) {
                                 <span>${timeAgo}</span>
                             </div>
                         </div>
+                        
+                        <!-- Actions Dropdown -->
+                        <div class="relative group/dropdown">
+                            <button class="text-slate-400 hover:text-white p-1 rounded-full hover:bg-white/5 transition-colors">
+                                <span class="material-symbols-outlined text-[20px]">more_horiz</span>
+                            </button>
+                            <div class="absolute right-0 top-full mt-2 w-48 bg-[#1e2330] border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover/dropdown:opacity-100 group-hover/dropdown:visible transition-all z-20 overflow-hidden">
+                                <button onclick="openReportModal(${post.id}, 'post')" class="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-white/5 hover:text-red-300 flex items-center gap-3 transition-colors">
+                                    <span class="material-symbols-outlined text-[18px]">flag</span> Report Post
+                                </button>
+                            </div>
+                        </div>
                     </div>
+                    
                     <div class="cursor-pointer" onclick="window.location.href='post-detail-veiw.html?id=${post.id}'">
-                        ${post.body ? `<p class="text-slate-200 mt-2 text-sm leading-relaxed">${post.body}</p>` : ''}
-                        ${mediaHTML}
+                        ${renderPostContent(post, mediaHTML)}
                     </div>
                     
                     <div class="flex gap-6 mt-4 border-t border-white/5 pt-3">
@@ -404,6 +442,19 @@ function createPostHTML(post) {
                                     <span class="material-symbols-outlined text-[18px]">chat_bubble</span> Comment
                                 </button>
                                 <span class="text-xs text-secondary-text hover:text-white ml-1">${post.comments_count > 0 ? post.comments_count : ''}</span>
+                            </div>
+
+                             <div class="flex items-center gap-2">
+                                <button onclick="retweetPost(${post.id})" class="flex items-center gap-2 text-secondary-text text-xs font-semibold hover:text-purple-500 transition-colors">
+                                    <span class="material-symbols-outlined text-[18px]">repeat</span> Repost
+                                </button>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <button onclick="sharePost(${post.id})" class="flex items-center gap-2 text-secondary-text text-xs font-semibold hover:text-green-500 transition-colors">
+                                    <span class="material-symbols-outlined text-[18px]">share</span> Share
+                                </button>
+                                <span class="text-xs text-secondary-text hover:text-white ml-1">${post.shares_count > 0 ? post.shares_count : ''}</span>
                             </div>
                     </div>
                 </div>
@@ -429,6 +480,110 @@ function createPostHTML(post) {
         </div>
     </article>`;
 }
+
+function renderRetweetHeader(post, user) {
+    // Check for original_post or originalPost (handle both snake and camel case just in case)
+    const original = post.original_post || post.originalPost;
+    if (!original) return '';
+    
+    return `
+    <div class="flex items-center gap-2 text-slate-400 text-xs font-bold mb-3 ml-12">
+        <span class="material-symbols-outlined text-[16px]">repeat</span>
+        <span>${user.name} Reposted</span>
+    </div>
+    `;
+}
+
+function renderPostContent(post, mediaHTML) {
+    const original = post.original_post || post.originalPost;
+    
+    if (original) {
+        // Render Original Post inside a container
+        const oUser = original.creator || original.user || { name: 'Unknown', id: 0 };
+         // If original post has media, we need to process it similar to createPostHTML to show it
+        let oMediaHTML = '';
+        if (original.attachments && original.attachments.length > 0) {
+             const files = Array.isArray(original.attachments) ? original.attachments : [];
+             if (files.length > 0) {
+                 const file = files[0];
+                 let src = '';
+                 if (typeof file === 'object' && file.file_path) src = `${PUBLIC_URL}/${file.file_path}`;
+                 else if (typeof file === 'string') src = `${PUBLIC_URL}/posts/${file}`;
+                 
+                 if(src) {
+                     oMediaHTML = `<div class="mt-3 rounded-lg overflow-hidden border border-white/10 h-48 relative group cursor-pointer">
+                     <div class="w-full h-full bg-cover bg-center" style="background-image: url('${src}')"></div>
+                     </div>`;
+                 }
+             }
+        }
+
+        return `
+            ${post.body ? `<p class="text-slate-200 mt-2 text-sm leading-relaxed mb-3">${post.body}</p>` : ''}
+            <div class="border border-white/10 rounded-xl p-4 bg-white/5 mt-2 hover:bg-white/10 transition-colors">
+                <div class="flex gap-3 mb-2">
+                     ${renderAvatarHTML(oUser, "size-6 rounded-full border border-white/10 object-cover")}
+                     <div>
+                         <h4 class="text-white font-bold text-xs">${oUser.name}</h4>
+                         <p class="text-[10px] text-slate-500">@${oUser.name.replace(/\s+/g, '').toLowerCase()}</p>
+                     </div>
+                </div>
+                <p class="text-slate-300 text-sm">${original.body || ''}</p>
+                ${oMediaHTML}
+            </div>
+        `;
+    }
+
+    // Normal Post
+    return `
+        ${post.body ? `<p class="text-slate-200 mt-2 text-sm leading-relaxed">${post.body}</p>` : ''}
+        ${mediaHTML}
+    `;
+}
+
+async function retweetPost(postId) {
+     // Fetch the post details first (we need username and body for the preview)
+     // We can try to find the post object in the DOM if we rendered it with data, OR just fetch it.
+     // Better yet, createPostHTML should pass the necessary data to retweetPost or we assume it's available.
+     // But since we only pass ID, we need to fetch or extract.
+     // Simpler approach: update createPostHTML to pass the needed strings, but that gets messy with quoting.
+     // So let's just fetch the single post details to be safe, OR extract from DOM.
+     
+     // Let's use the API to get fresh details to ensure we are quoting valid content.
+     try {
+         const response = await fetch(`${API_BASE_URL}/get_post`, {
+             method: 'POST',
+             headers: { 
+                 'Authorization': `Bearer ${token}`,
+                 'Content-Type': 'application/json' 
+             },
+             body: JSON.stringify({ id: postId })
+         });
+         const data = await response.json();
+         
+         if(data.success && data.data) {
+             const post = data.data;
+             const user = post.user || { name: 'Unknown' };
+             
+             if (typeof window.prepareRetweet === 'function') {
+                 window.prepareRetweet({
+                     id: post.id,
+                     username: user.name,
+                     body: post.body
+                 });
+             } else {
+                 // Fallback for pages without the create post form (e.g. profile page maybe?)
+                 // For now, if no prepareRetweet, we can show a toast or redirect to dashboard.
+                 window.location.href = `homefeed-dashboard.html?repost=${post.id}`;
+             }
+         }
+     } catch(e) {
+         console.error(e);
+         showToast('Error preparing repost', 'error');
+     }
+}
+
+
 
 async function toggleCommentSection(postId) {
     const section = document.getElementById(`comment-section-${postId}`);
@@ -841,3 +996,115 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+// --- Report Functions ---
+window.openReportModal = function(id, type) {
+    document.getElementById('report-target-id').value = id;
+    document.getElementById('report-target-type').value = type;
+    document.getElementById('report-modal').classList.remove('hidden');
+}
+
+window.closeReportModal = function() {
+    document.getElementById('report-modal').classList.add('hidden');
+    // internal reset
+    const input = document.getElementById('report-reason-input');
+    if (input) input.value = '';
+}
+
+window.submitReport = async function() {
+    const id = document.getElementById('report-target-id').value;
+    const type = document.getElementById('report-target-type').value;
+    const reasonInput = document.getElementById('report-reason-input');
+    const reason = reasonInput.value.trim();
+
+    if (!reason) {
+        showToast('Please provide a reason for the report', 'error');
+        return;
+    }
+    
+    // Optimistic UI close
+    closeReportModal();
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/report_content`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                reportable_id: id,
+                reportable_type: type, // 'post', 'comment', or 'reply'
+                reason: reason
+            })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Report submitted. Thank you for making our community safer.', 'success');
+        } else {
+            showToast(data.message || 'Failed to submit report', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        showToast('Network error while reporting', 'error');
+    }
+}
+
+async function sharePost(postId) {
+    const shareUrl = `${window.location.origin}/post-detail-veiw.html?id=${postId}`;
+    const shareData = {
+        title: 'Check out this post!',
+        text: 'Found this interesting post on Social App',
+        url: shareUrl
+    };
+
+    let shared = false;
+
+    // 1. Try Native Share (Mobile/Supported Desktops)
+    if (navigator.share) {
+        try {
+            await navigator.share(shareData);
+            shared = true;
+        } catch (err) {
+            console.log('Share canceled or failed', err);
+            // If user canceled, we arguably shouldn't count it, but distincting cancel vs error is hard consistently
+        }
+    } else {
+        // 2. Fallback: Copy to Clipboard
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            showToast('Link copied to clipboard! 📋', 'success');
+            shared = true;
+        } catch (err) {
+            console.error('Clipboard failed', err);
+            prompt('Copy this link:', shareUrl); // Ultimate fallback
+            shared = true; // Assume they copied it
+        }
+    }
+
+    // 3. If sharing action was initiated/completed, track it in backend (increment count)
+    if (shared) {
+        try {
+            // We use the same 'share_post' endpoint. 
+            // In the future, if you have distinct "Retweet" vs "External Share", you can add a 'type' field.
+            // For now, this lets us track the "Share Count".
+            fetch(`${API_BASE_URL}/share_post`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ post_id: postId })
+            }).then(res => res.json()).then(data => {
+                if(data.success && typeof loadPosts === 'function') {
+                    // Optional: update UI count locally or reload
+                    // loadPosts(); // Reloading might be disruptive if just copying link, maybe just leave count as is until refresh
+                }
+            });
+        } catch (e) {
+            console.error('Failed to track share', e);
+        }
+    }
+}

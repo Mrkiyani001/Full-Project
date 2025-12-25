@@ -4,187 +4,185 @@
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Admin Settings - Social Platform</title>
+    <title>Site Settings - Admin</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&amp;display=swap"
-        rel="stylesheet" />
-    <script id="tailwind-config">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" />
+    <script>
         tailwind.config = {
             darkMode: "class",
             theme: {
                 extend: {
-                    colors: {
-                        "primary": "#215bed",
-                        "background-light": "#f6f6f8",
-                        "background-dark": "#101522",
-                        "surface-dark": "#1a1f2e",
-                        "surface-glass": "rgba(30, 35, 50, 0.7)",
-                    },
-                    fontFamily: {
-                        "display": ["Inter", "sans-serif"]
-                    },
-                    borderRadius: { "DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px" },
-                    backdropBlur: {
-                        xs: '2px',
-                    }
+                    colors: { "primary": "#215bed", "background-dark": "#101522" },
+                    fontFamily: { "display": ["Inter", "sans-serif"] }
                 },
             },
         }
     </script>
     <style>
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #111318;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #282d39;
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #3b4254;
-        }
-
-        .glass-panel {
-            background: rgba(30, 35, 50, 0.6);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .glass-sidebar {
-            background: rgba(16, 21, 34, 0.95);
-            backdrop-filter: blur(10px);
-            border-right: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .input-dark {
-            background-color: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            transition: all 0.2s;
-        }
-
-        .input-dark:focus {
-            border-color: #215bed;
-            box-shadow: 0 0 0 2px rgba(33, 91, 237, 0.2);
-            outline: none;
-            background-color: rgba(255, 255, 255, 0.05);
-        }
-
-        .toggle-checkbox:checked {
-            right: 0;
-            border-color: #68D391;
-        }
-
-        .toggle-checkbox:checked+.toggle-label {
-            background-color: #68D391;
-        }
+        .glass-panel { background: rgba(30, 35, 50, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .input-dark { background-color: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(255, 255, 255, 0.1); color: white; transition: all 0.2s; }
+        .input-dark:focus { border-color: #215bed; outline: none; background-color: rgba(255, 255, 255, 0.08) !important; box-shadow: 0 0 0 4px rgba(33, 91, 237, 0.1); }
+        select option { background-color: #101522; color: white; }
     </style>
 </head>
 
-<body class="bg-background-dark text-white font-display h-screen w-full overflow-hidden flex selection:bg-primary selection:text-white">
-    <!-- Sidebar Navigation -->
-    <aside id="admin-sidebar" class="w-20 lg:w-72 flex-shrink-0 h-full flex flex-col justify-between border-r border-glass-border bg-[#111318]/90 z-20 relative">
-        <!-- Sidebar injected here -->
-    </aside>
+<body class="bg-background-dark text-white font-display h-screen w-full flex overflow-hidden">
+    <!-- Sidebar -->
+    <aside id="admin-sidebar" class="hidden md:flex w-20 lg:w-72 flex-col border-r border-white/5 bg-[#111318]/90 z-20"></aside>
 
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col relative z-10 overflow-hidden bg-background-dark">
-        <!-- Background Effects -->
-        <div class="ambient-glow"></div>
-        <div class="ambient-glow-2"></div>
-
-        <!-- Sticky Header -->
-        <header class="h-20 flex items-center justify-between px-6 lg:px-12 border-b border-glass-border backdrop-blur-sm bg-background-dark/30 sticky top-0 z-20 shrink-0">
-            <div class="flex flex-col">
-                <h2 class="text-xl font-bold text-white tracking-tight">Admin Settings</h2>
-                <p class="text-xs text-slate-400">Configure platform preferences and security.</p>
+    <main class="flex-1 flex flex-col relative overflow-hidden">
+        <!-- Header -->
+        <header class="h-20 flex items-center justify-between px-6 border-b border-white/5 bg-background-dark/30 backdrop-blur-sm sticky top-0 z-20">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleSidebar()" class="md:hidden text-white p-2"><span class="material-symbols-outlined">menu</span></button>
+                <div>
+                    <h2 class="text-xl font-bold">Site Settings</h2>
+                    <p class="text-xs text-slate-400">Manage global website configuration</p>
+                </div>
             </div>
-            <div class="flex items-center gap-4">
-                <button onclick="saveSettings()" class="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg shadow-primary/20 transition-all active:scale-95">
-                    Save All Changes
-                </button>
-            </div>
+            <button onclick="saveSiteSettings()" id="save-btn" class="bg-primary hover:bg-blue-600 px-6 py-2 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 transition">Save Changes</button>
         </header>
 
-        <!-- Scrollable Content -->
-        <div class="flex-1 overflow-y-auto p-4 md:p-8 lg:px-12 custom-scrollbar">
-            <div class="max-w-5xl mx-auto flex flex-col gap-8 pb-20">
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10 custom-scrollbar">
+            <div class="max-w-4xl mx-auto space-y-8 pb-20">
                 
-                <section class="flex flex-col gap-6">
-                    <div class="glass-panel p-6 md:p-8 rounded-xl shadow-2xl">
-                        <div class="flex flex-col gap-6">
-                            <div class="flex flex-col gap-1 border-b border-white/5 pb-4">
-                                <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-primary">shield_person</span>
-                                    Account Settings
-                                </h3>
-                                <p class="text-sm text-white/40">Update your personal profile credentials.</p>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div class="flex flex-col gap-4">
-                                    <div class="flex flex-col gap-2">
-                                        <label class="text-sm font-medium text-white/80">Full Name</label>
-                                        <input id="admin-name" class="w-full rounded-lg px-4 py-3 input-dark placeholder-white/20 text-sm" type="text" />
-                                    </div>
-                                    <div class="flex flex-col gap-2">
-                                        <label class="text-sm font-medium text-white/80">Email Address</label>
-                                        <input id="admin-email" class="w-full rounded-lg px-4 py-3 input-dark placeholder-white/20 text-sm" type="email" />
-                                    </div>
-                                </div>
+                <!-- General Section -->
+                <div class="glass-panel p-6 rounded-2xl">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><span class="material-symbols-outlined text-primary">settings</span> General Information</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase">Website Name</label>
+                            <input type="text" id="site_name" class="w-full mt-2 rounded-lg p-3 input-dark text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase">Support Email</label>
+                            <input type="email" id="support_email" class="w-full mt-2 rounded-lg p-3 input-dark text-sm">
+                        </div>
+                        <div class="col-span-full">
+                            <label class="text-xs font-bold text-slate-400 uppercase">Site Description</label>
+                            <textarea id="site_description" rows="3" class="w-full mt-2 rounded-lg p-3 input-dark text-sm"></textarea>
+                        </div>
+                    </div>
+                </div>
 
-                                <div class="flex flex-col gap-4">
-                                    <div class="flex flex-col gap-2">
-                                        <label class="text-sm font-medium text-white/80">New Password</label>
-                                        <input id="new-password" class="w-full rounded-lg px-4 py-3 input-dark placeholder-white/20 text-sm" type="password" placeholder="Leave empty to keep current" />
-                                    </div>
-                                    <div class="flex flex-col gap-2">
-                                        <label class="text-sm font-medium text-white/80">Confirm Password</label>
-                                        <input id="confirm-password" class="w-full rounded-lg px-4 py-3 input-dark placeholder-white/20 text-sm" type="password" />
-                                    </div>
+                <!-- Branding Section -->
+                <div class="glass-panel p-6 rounded-2xl">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><span class="material-symbols-outlined text-primary">palette</span> Branding & Appearance</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">Logo</label>
+                            <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-white/10 rounded-xl cursor-pointer hover:bg-white/5 hover:border-primary/50 transition relative overflow-hidden group">
+                                <img id="logo-preview" class="absolute inset-0 w-full h-full object-contain p-4 opacity-50 group-hover:opacity-40 transition" src="">
+                                <div class="z-10 flex flex-col items-center transition-transform group-hover:scale-110">
+                                    <span class="material-symbols-outlined text-3xl text-primary mb-2 shadow-lg bg-background-dark/50 rounded-full p-2">cloud_upload</span>
+                                    <span class="text-xs text-slate-300 font-medium bg-background-dark/50 px-2 py-1 rounded">Click to upload</span>
                                 </div>
+                                <input type="file" id="logo" class="hidden" accept="image/*" onchange="previewImage(this, 'logo-preview')">
+                            </label>
+                            <p class="text-[10px] text-slate-500 mt-2 text-center">Recommended: PNG, 200x50px</p>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">Favicon</label>
+                            <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-white/10 rounded-xl cursor-pointer hover:bg-white/5 hover:border-primary/50 transition relative overflow-hidden group">
+                                <img id="favicon-preview" class="absolute inset-0 w-full h-full object-contain p-4 opacity-50 group-hover:opacity-40 transition" src="">
+                                <div class="z-10 flex flex-col items-center transition-transform group-hover:scale-110">
+                                    <span class="material-symbols-outlined text-3xl text-primary mb-2 shadow-lg bg-background-dark/50 rounded-full p-2">cloud_upload</span>
+                                    <span class="text-xs text-slate-300 font-medium bg-background-dark/50 px-2 py-1 rounded">Click to upload</span>
+                                </div>
+                                <input type="file" id="favicon" class="hidden" accept="image/*" onchange="previewImage(this, 'favicon-preview')">
+                            </label>
+                            <p class="text-[10px] text-slate-500 mt-2 text-center">Recommended: ICO/PNG, 32x32px</p>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label class="text-xs font-bold text-slate-400 uppercase">Theme Color</label>
+                            <div class="h-12 w-full rounded-lg input-dark flex items-center px-2 gap-3 relative overflow-hidden">
+                                <input type="color" id="theme_color" class="h-8 w-8 rounded cursor-pointer bg-transparent border-0 p-0" value="#3b82f6">
+                                <span id="theme_color_text" class="text-sm text-slate-300 font-mono tracking-wider">#3b82f6</span>
+                                <div class="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background-dark to-transparent pointer-events-none"></div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="glass-panel p-6 md:p-8 rounded-xl shadow-2xl">
-                        <div class="flex flex-col gap-6">
-                            <div class="flex flex-col gap-1 border-b border-white/5 pb-4">
-                                <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-primary">language</span>
-                                    Platform Defaults
-                                </h3>
-                                <p class="text-sm text-white/40">General configuration for the platform.</p>
-                            </div>
-                            <div class="grid grid-cols-1 gap-6">
-                                <div class="flex flex-col gap-2">
-                                    <label class="text-sm font-medium text-white/80">Website Name</label>
-                                    <input class="w-full rounded-lg px-4 py-3 input-dark placeholder-white/20 text-sm" type="text" value="Social Platform" />
-                                </div>
-                                <div class="flex flex-col gap-2">
-                                    <label class="text-sm font-medium text-white/80">Admin Email Notifications</label>
-                                    <div class="flex items-center gap-3">
-                                        <div class="relative inline-block w-10 mr-2 align-middle select-none">
-                                            <input type="checkbox" name="toggle" id="toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer outline-none transition-all duration-300 right-4 checked:right-0 checked:bg-primary"/>
-                                            <label for="toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-slate-700 cursor-pointer"></label>
-                                        </div>
-                                        <span class="text-sm text-slate-400">Receive alerts for new reports</span>
-                                    </div>
-                                </div>
-                            </div>
+                <!-- Social Links -->
+                <div class="glass-panel p-6 rounded-2xl">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><span class="material-symbols-outlined text-primary">share</span> Social Links</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase">Facebook URL</label>
+                            <input type="url" id="facebook_url" class="w-full mt-2 rounded-lg p-3 input-dark text-sm" placeholder="https://facebook.com/...">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase">Instagram URL</label>
+                            <input type="url" id="instagram_url" class="w-full mt-2 rounded-lg p-3 input-dark text-sm" placeholder="https://instagram.com/...">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase">Twitter (X) URL</label>
+                            <input type="url" id="twitter_url" class="w-full mt-2 rounded-lg p-3 input-dark text-sm" placeholder="https://x.com/...">
                         </div>
                     </div>
-                </section> section
+                </div>
+
+                <!-- System Controls -->
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-orange-500">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><span class="material-symbols-outlined text-orange-400">admin_panel_settings</span> System Controls</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition">
+                            <div>
+                                <p class="font-bold text-sm">Allow Registration</p>
+                                <p class="text-xs text-slate-400">New users can sign up.</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="allow_registration" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+
+                        <div class="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition">
+                            <div>
+                                <p class="font-bold text-sm">Email Verification</p>
+                                <p class="text-xs text-slate-400">Require email verification for new accounts (Coming Soon).</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="email_verification" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                            </label>
+                        </div>
+
+                        <div class="flex items-center justify-between p-3 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition">
+                            <div>
+                                <p class="font-bold text-sm text-red-400">Maintenance Mode</p>
+                                <p class="text-xs text-red-300/70">Disable the site for all users except admins.</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="maintenance_mode" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEO -->
+                <div class="glass-panel p-6 rounded-2xl">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><span class="material-symbols-outlined text-primary">search</span> SEO & Localization</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase">Default Language</label>
+                            <select id="default_language" class="w-full mt-2 rounded-lg p-3 input-dark text-sm bg-background-dark">
+                                <option value="en">English</option>
+                                <option value="ur">Urdu (Coming Soon)</option>
+                                <option value="es">Spanish (Coming Soon)</option>
+                            </select>
+                        </div>
+                        <div class="col-span-full">
+                            <label class="text-xs font-bold text-slate-400 uppercase">Meta Keywords (Comma separated)</label>
+                            <input type="text" id="meta_keywords" class="w-full mt-2 rounded-lg p-3 input-dark text-sm" placeholder="social, best app, connect">
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </main>
@@ -193,31 +191,130 @@
         const API_BASE_URL = 'http://127.0.0.1:8000/api';
         const PUBLIC_URL = 'http://127.0.0.1:8000';
     </script>
+    <script src="../js/site_branding.js"></script>
     <script src="../js/admin_utils.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            renderAdminSidebar('settings');
-            
-            // Fill admin data
-            document.getElementById('admin-name').value = ADMIN_USER_DATA.name || '';
-            document.getElementById('admin-email').value = ADMIN_USER_DATA.email || '';
+             renderAdminSidebar('settings');
+             loadSettings();
+             
+             // Color picker sync
+             document.getElementById('theme_color').addEventListener('input', (e) => {
+                 document.getElementById('theme_color_text').textContent = e.target.value;
+             });
         });
 
-        function saveSettings() {
-            // Visual feedback
-            const btn = event.target;
-            const originalText = btn.textContent;
+        async function loadSettings() {
+             try {
+                const response = await fetch(`${API_BASE_URL}/settings`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                         'Accept': 'application/json'
+                    }
+                });
+
+                if(handleAdminApiError(response)) return;
+
+                const res = await response.json();
+                if(res.success) {
+                    const s = res.data;
+                    document.getElementById('site_name').value = s.site_name || '';
+                    document.getElementById('site_description').value = s.site_description || '';
+                    document.getElementById('support_email').value = s.support_email || '';
+                    document.getElementById('facebook_url').value = s.facebook_url || '';
+                    document.getElementById('instagram_url').value = s.instagram_url || '';
+                    document.getElementById('twitter_url').value = s.twitter_url || '';
+                    document.getElementById('theme_color').value = s.theme_color || '#3b82f6';
+                    document.getElementById('theme_color_text').textContent = s.theme_color || '#3b82f6';
+                    document.getElementById('meta_keywords').value = s.meta_keywords || '';
+                    document.getElementById('default_language').value = s.default_language || 'en';
+                    
+                    document.getElementById('maintenance_mode').checked = !!s.maintenance_mode;
+                    document.getElementById('allow_registration').checked = !!s.allow_registration;
+                    document.getElementById('email_verification').checked = !!s.email_verification;
+
+                    if(s.logo) {
+                        const img = document.getElementById('logo-preview');
+                        img.src = `http://127.0.0.1:8000/storage/${s.logo}`;
+                        img.classList.remove('opacity-50'); // Show full opacity if loaded
+                        img.classList.add('opacity-100');
+                    }
+                    if(s.favicon) {
+                        const img = document.getElementById('favicon-preview');
+                        img.src = `http://127.0.0.1:8000/storage/${s.favicon}`;
+                        img.classList.remove('opacity-50');
+                        img.classList.add('opacity-100');
+                    }
+                }
+            } catch(e) {
+                console.error("Failed to load settings", e);
+            }
+        }
+
+        function previewImage(input, previewId) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById(previewId);
+                    img.src = e.target.result;
+                    img.classList.remove('opacity-50');
+                    img.classList.add('opacity-100');
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function saveSiteSettings() {
+            const btn = document.getElementById('save-btn');
             btn.textContent = 'Saving...';
             btn.disabled = true;
 
-            setTimeout(() => {
-                alert('Settings updated successfully (Local preference). In a real scenario, this would call the /updateUser or /settings API.');
-                btn.textContent = originalText;
+            const formData = new FormData();
+            formData.append('site_name', document.getElementById('site_name').value);
+            formData.append('site_description', document.getElementById('site_description').value);
+            formData.append('support_email', document.getElementById('support_email').value);
+            formData.append('facebook_url', document.getElementById('facebook_url').value);
+            formData.append('instagram_url', document.getElementById('instagram_url').value);
+            formData.append('twitter_url', document.getElementById('twitter_url').value);
+            formData.append('theme_color', document.getElementById('theme_color').value);
+            formData.append('meta_keywords', document.getElementById('meta_keywords').value);
+            formData.append('default_language', document.getElementById('default_language').value);
+
+            formData.append('maintenance_mode', document.getElementById('maintenance_mode').checked ? '1' : '0');
+            formData.append('allow_registration', document.getElementById('allow_registration').checked ? '1' : '0');
+            formData.append('email_verification', document.getElementById('email_verification').checked ? '1' : '0');
+
+            const logoFile = document.getElementById('logo').files[0];
+            if(logoFile) formData.append('logo', logoFile);
+            
+            const favFile = document.getElementById('favicon').files[0];
+            if(favFile) formData.append('favicon', favFile);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/settings`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if(data.success) {
+                    alert('Settings updated successfully!');
+                    loadSettings(); // Reload to see new images
+                } else {
+                    alert('Failed: ' + JSON.stringify(data.message));
+                }
+            } catch(e) {
+                console.error(e);
+                alert('An error occurred.');
+            } finally {
+                btn.textContent = 'Save Changes';
                 btn.disabled = false;
-            }, 800);
+            }
         }
     </script>
 </body>
-
-
 </html>

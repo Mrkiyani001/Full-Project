@@ -86,7 +86,7 @@
     class="bg-background-dark text-white font-display h-screen w-full overflow-hidden flex selection:bg-primary selection:text-white">
     <!-- Sidebar Navigation -->
     <aside id="admin-sidebar"
-        class="w-20 lg:w-72 flex-shrink-0 h-full flex flex-col justify-between border-r border-glass-border bg-[#111318]/90 z-20 relative">
+        class="hidden md:flex w-20 lg:w-72 flex-shrink-0 h-full flex flex-col justify-between border-r border-glass-border bg-[#111318]/90 z-20 relative">
         <!-- Sidebar injected here -->
     </aside>
 
@@ -99,9 +99,14 @@
         <!-- Sticky Header -->
         <header
             class="h-20 flex items-center justify-between px-6 lg:px-10 border-b border-glass-border backdrop-blur-sm bg-background-dark/30 sticky top-0 z-20 shrink-0">
-            <div class="flex flex-col">
-                <h2 class="text-xl font-bold text-white tracking-tight">Reports Center</h2>
-                <p class="text-xs text-slate-400">Review and resolve community flagged content.</p>
+            <div class="flex items-center gap-3">
+                <button id="mobile-menu-btn" onclick="toggleSidebar()" class="md:hidden text-white p-2 -ml-2 mr-2">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <div class="flex flex-col">
+                    <h2 class="text-xl font-bold text-white tracking-tight">Reports Center</h2>
+                    <p class="text-xs text-slate-400">Review and resolve community flagged content.</p>
+                </div>
             </div>
             <div class="flex items-center gap-4">
                 <button onclick="loadReports()"
@@ -130,6 +135,7 @@
         const API_BASE_URL = 'http://127.0.0.1:8000/api';
         const PUBLIC_URL = 'http://127.0.0.1:8000';
     </script>
+    <script src="../js/site_branding.js"></script>
     <script src="../js/admin_utils.js"></script>
     <script>
         // Utility function to format time
@@ -153,7 +159,7 @@
         }
 
         let currentPage = 1;
-        const reportsPerPage = 10;
+        let currentLimit = 10;
 
         async function loadReports(page = 1) {
             currentPage = page;
@@ -164,9 +170,12 @@
             </div>`;
 
             try {
-                const response = await fetch(`${API_BASE_URL}/get_reports?page=${currentPage}&limit=${reportsPerPage}`, {
+                const response = await fetch(`${API_BASE_URL}/get_reports?page=${currentPage}&limit=${currentLimit}`, {
                     headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
                 });
+
+                if(handleAdminApiError(response)) return;
+
                 const data = await response.json();
 
                 if (data.success && data.data && data.data.items && data.data.items.length > 0) {
@@ -211,7 +220,7 @@
                 let reasonLabel = report.reason || 'No reason provided';
                 
                 // Content preview
-                let contentPreview = reportable.content || reportable.comment || reportable.text || 'Content removed or unavailable';
+                let contentPreview = reportable.body || reportable.comment || reportable.reply || 'Content removed or unavailable';
                 if (contentPreview.length > 120) contentPreview = contentPreview.substring(0, 117) + '...';
 
                 grid.innerHTML += `
@@ -271,10 +280,12 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ 
-                        report_id: reportId,
                         action: action
                     })
                 });
+
+                if(handleAdminApiError(response)) return;
+
                 const data = await response.json();
                 if (data.success) {
                     const card = document.getElementById(`report-${reportId}`);
@@ -299,6 +310,11 @@
                 alert('Server error.');
             }
         }
+    
+        function updateLimit(newLimit) {
+            currentLimit = parseInt(newLimit);
+            loadReports(1); // Reset to page 1
+        }
 
         function updatePagination(totalReports, currentPage, lastPage) {
             const paginationInfo = document.getElementById('pagination-info');
@@ -307,8 +323,8 @@
 
             if (!paginationInfo) return;
 
-            const start = (currentPage - 1) * reportsPerPage + 1;
-            const end = Math.min(currentPage * reportsPerPage, totalReports);
+            const start = (currentPage - 1) * currentLimit + 1;
+            const end = Math.min(currentPage * currentLimit, totalReports);
 
             if (totalReports === 0) {
                 paginationInfo.textContent = 'No reports';
@@ -335,10 +351,21 @@
         });
     </script>
                 <!-- Pagination -->
-                <div class="flex items-center justify-between pt-6 border-t border-white/5">
-                    <p class="text-sm text-slate-400" id="pagination-info">Showing <span
-                            class="text-white font-medium">...</span> of <span class="text-white font-medium">...</span>
-                        reports</p>
+                <div class="flex flex-col md:flex-row gap-4 items-center justify-between pt-6 border-t border-white/5">
+                    <div class="flex items-center gap-4">
+                        <p class="text-sm text-slate-400" id="pagination-info">Showing <span class="text-white font-medium">...</span> reports</p>
+                        <!-- Rows per page -->
+                        <div class="flex items-center gap-2">
+                             <span class="text-xs text-slate-500 uppercase font-bold hidden sm:inline">Rows:</span>
+                             <select onchange="updateLimit(this.value)" class="bg-card-dark border border-white/10 rounded-lg text-xs text-white p-1.5 focus:outline-none focus:border-primary">
+                                 <option value="10">10</option>
+                                 <option value="20">20</option>
+                                 <option value="50">50</option>
+                                 <option value="100">100</option>
+                             </select>
+                        </div>
+                    </div>
+                    
                     <div class="flex gap-2">
                         <button id="prev-page-btn" onclick="loadReports(currentPage - 1)"
                             class="px-4 py-2 rounded-lg bg-card-dark border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 transition text-sm">Previous</button>

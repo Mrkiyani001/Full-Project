@@ -63,7 +63,15 @@ function renderAdminSidebar(activePageId) {
     });
 
     sidebar.innerHTML = `
-        <div class="p-6 border-b border-white/5">
+        <!-- Site Brand -->
+        <div class="px-6 pt-6 pb-2 flex items-center gap-3">
+             <div id="site-logo-img" class="w-10 h-10 rounded-xl flex items-center justify-center bg-cover bg-center bg-no-repeat">
+                 <span class="material-symbols-outlined text-white/50 text-2xl">token</span>
+             </div>
+             <h1 id="site-logo-text" class="text-xl font-bold text-white tracking-tight">SocialApp</h1>
+        </div>
+
+        <div class="p-6 border-b border-white/5 flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <div class="relative group cursor-pointer" onclick="window.location.href='../profile.html'">
                     <img src="${avatarUrl}" class="rounded-full size-12 ring-2 ring-primary/30 group-hover:ring-primary transition-all duration-300 object-cover bg-slate-700"
@@ -75,6 +83,10 @@ function renderAdminSidebar(activePageId) {
                     <p class="text-slate-400 text-xs font-medium capitalize">${typeof ADMIN_USER_DATA.roles?.[0] === 'object' ? ADMIN_USER_DATA.roles[0].name : (ADMIN_USER_DATA.roles?.[0] || 'Admin')}</p>
                 </div>
             </div>
+            <!-- Mobile Close Button -->
+            <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-white p-1">
+                <span class="material-symbols-outlined">close</span>
+            </button>
         </div>
         <nav class="flex-1 flex flex-col gap-2 p-4 overflow-y-auto">
             ${menuHtml}
@@ -90,6 +102,11 @@ function renderAdminSidebar(activePageId) {
             </button>
         </div>
     `;
+    
+    // Trigger branding update if available
+    if (window.refreshSiteBranding) {
+        window.refreshSiteBranding();
+    }
 }
 
 function handleAdminLogout() {
@@ -122,5 +139,32 @@ async function banUser(userId) {
     }
 }
 
+// 4. Mobile Sidebar Toggle Helper
+function toggleSidebar() {
+    const sidebar = document.querySelector('aside');
+    if (!sidebar) return;
+    sidebar.classList.toggle('hidden');
+    sidebar.classList.toggle('flex');
+    sidebar.classList.toggle('absolute');
+    sidebar.classList.toggle('inset-0');
+    sidebar.classList.toggle('z-50');
+    sidebar.classList.toggle('w-full');
+}
+
+// Initialize guard
 // Initialize guard
 checkAdminAccess();
+
+// 5. Centralized API Error Handler
+function handleAdminApiError(response, defaultMsg = 'An error occurred') {
+    if (response.status === 403) {
+        alert('Access Denied: You do not have permission to perform this action.');
+        return true; // handled
+    }
+    if (response.status === 401) {
+        alert('Session expired. Please login again.');
+        handleAdminLogout();
+        return true; 
+    }
+    return false; // not handled, caller should show defaultMsg or parse error
+}

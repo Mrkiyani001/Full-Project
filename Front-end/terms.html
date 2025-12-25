@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Terms of Service - NexUs</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Theme Config -->
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#215bed",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101522",
+                        "surface-dark": "#1c1f27",
+                        "glass-border": "rgba(255, 255, 255, 0.08)",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(16, 21, 34, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .animated-bg {
+            background: radial-gradient(circle at 15% 50%, rgba(33, 91, 237, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(124, 58, 237, 0.15), transparent 25%);
+            background-color: #101522;
+        }
+
+        /* Custom Scrollbar for the content area */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+
+<body class="font-display antialiased text-white selection:bg-primary selection:text-white overflow-hidden">
+    <!-- Main Container -->
+    <div class="relative flex min-h-screen w-full flex-col justify-center items-center animated-bg p-4">
+
+        <!-- Background Ambient Glows -->
+        <div
+            class="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-primary/20 blur-[120px] pointer-events-none">
+        </div>
+        <div
+            class="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-purple-600/10 blur-[120px] pointer-events-none">
+        </div>
+
+        <!-- Content Card -->
+        <div class="relative w-full max-w-4xl glass-card rounded-2xl overflow-hidden z-10 flex flex-col max-h-[90vh]">
+
+            <!-- Header -->
+            <div class="p-6 md:p-8 border-b border-white/5 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-4">
+                    <!-- Dynamic Logo Container -->
+                    <div id="site-logo-img"
+                        class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary bg-cover bg-center bg-no-repeat">
+                        <span class="material-symbols-outlined text-xl">token</span>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold">Terms of Service</h1>
+                        <p class="text-sm text-slate-400">Last updated: December 2025</p>
+                    </div>
+                </div>
+                <a href="register.html"
+                    class="p-2 hover:bg-white/5 rounded-full transition-colors text-slate-400 hover:text-white">
+                    <span class="material-symbols-outlined">close</span>
+                </a>
+            </div>
+
+            <!-- Scrollable Content -->
+            <div
+                class="p-6 md:p-8 overflow-y-auto custom-scrollbar space-y-8 text-slate-300 leading-relaxed font-light">
+
+                <section>
+                    <h2 class="text-lg font-semibold text-white mb-3">1. Acceptance of Terms</h2>
+                    <p>By accessing and using this social platform, you accept and agree to be bound by the terms and
+                        provision of this agreement. In addition, when using these particular services, you shall be
+                        subject to any posted guidelines or rules applicable to such services.</p>
+                </section>
+
+                <section>
+                    <h2 class="text-lg font-semibold text-white mb-3">2. User Account Security</h2>
+                    <p>You are responsible for maintaining the confidentiality of your password and account details, and
+                        are fully responsible for all activities that occur under your password or account. Please
+                        immediately notify us of any unauthorized use of your account or any other breach of security.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 class="text-lg font-semibold text-white mb-3">3. User Conduct</h2>
+                    <p>You agree to not use the platform to:</p>
+                    <ul class="list-disc list-inside mt-2 space-y-1 ml-2 marker:text-primary">
+                        <li>Upload any content that is unlawful, harmful, threatening, abusive, harassing, or
+                            defamatory.</li>
+                        <li>Impersonate any person or entity or falsely state your affiliation with a person or entity.
+                        </li>
+                        <li>Upload any unsolicited or unauthorized advertising, promotional materials, or spam.</li>
+                        <li>Violate any applicable local, state, national or international law.</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2 class="text-lg font-semibold text-white mb-3">4. Content Ownership & License</h2>
+                    <p>You retain all ownership rights to the content you upload. However, by uploading content to the
+                        platform, you grant us a worldwide, non-exclusive, royalty-free license to use, reproduce,
+                        modify, adapt, publish, translate, and distribute it in any existing or future media.</p>
+                </section>
+
+                <section>
+                    <h2 class="text-lg font-semibold text-white mb-3">5. Termination</h2>
+                    <p>We reserve the right to terminate or suspend your access to our service immediately, without
+                        prior notice or liability, for any reason whatsoever, including without limitation if you breach
+                        the Terms.</p>
+                </section>
+
+                <section>
+                    <h2 class="text-lg font-semibold text-white mb-3">6. Changes to Terms</h2>
+                    <p>We reserve the right, at our sole discretion, to modify or replace these Terms at any time. We
+                        will try to provide at least 30 days notice prior to any new terms taking effect.</p>
+                </section>
+
+            </div>
+
+            <!-- Footer -->
+            <div class="p-6 border-t border-white/5 shrink-0 bg-black/20 flex justify-end gap-3">
+                <a href="register.html"
+                    class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-white/5 hover:bg-white/10 transition-colors">Decline</a>
+                <a href="register.html"
+                    class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-primary hover:bg-blue-600 shadow-lg shadow-primary/25 transition-all transform hover:-translate-y-0.5">I
+                    Accept</a>
+            </div>
+
+        </div>
+    </div>
+    <script src="js/site_branding.js"></script>
+</body>
+
+</html>

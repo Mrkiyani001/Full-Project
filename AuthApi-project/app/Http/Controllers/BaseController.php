@@ -26,7 +26,7 @@ class BaseController extends Controller
     {
         // Ensure profile and avatar are loaded
         $user->load('profile.avatar');
-        
+
         return response()->json([
             'access_token' => $token,
             'token_type' => 'bearer',
@@ -92,7 +92,8 @@ class BaseController extends Controller
             'message' => 'Unauthorized',
         ], 401);
     }
-    public function paginateData($paginate, $data){
+    public function paginateData($paginate, $data)
+    {
         return [
             'items' => $data,
             'pagination' => [
@@ -100,6 +101,9 @@ class BaseController extends Controller
                 'per_page' => $paginate->perPage(),
                 'current_page' => $paginate->currentPage(),
                 'last_page' => $paginate->lastPage(),
+                'from' => $paginate->firstItem(),
+                'to' => $paginate->lastItem(),
+                'total_pages' => $paginate->lastPage(),
             ]
         ];
     }

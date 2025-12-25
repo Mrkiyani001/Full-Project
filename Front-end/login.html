@@ -5,7 +5,7 @@
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Login - Social Platform</title>
+    <title>Login</title>
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
@@ -86,11 +86,11 @@
             <!-- Card Header / Brand -->
             <div class="flex flex-col items-center pt-10 px-8 pb-2">
                 <!-- Logo Placeholder -->
-                <div
-                    class="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg shadow-primary/30 mb-6">
+                <div id="site-logo-img"
+                    class="h-16 w-16 rounded-xl flex items-center justify-center mb-6 bg-cover bg-center bg-no-repeat">
                     <span class="material-symbols-outlined text-white text-3xl">hub</span>
                 </div>
-                <h1 class="text-3xl font-extrabold tracking-tight text-white mb-2 text-center">Welcome Back</h1>
+                <h1 id="site-logo-text" class="text-3xl font-extrabold tracking-tight text-white mb-2 text-center"></h1>
                 <p class="text-slate-400 text-base text-center max-w-xs">Enter your details to access your account.</p>
             </div>
             <!-- Form Content -->
@@ -192,10 +192,11 @@
         </div>
         <!-- Footer Info -->
         <div class="mt-8 text-center">
-            <p class="text-xs text-slate-600 font-medium">© 2023 Social Platform. All rights reserved.</p>
+            <p id="site-footer-text" class="text-xs text-slate-600 font-medium"></p>
             <div class="flex gap-4 justify-center mt-2 text-xs text-slate-600">
-                <a class="hover:text-slate-400" href="#">Privacy</a>
-                <a class="hover:text-slate-400" href="#">Terms</a>
+                <a class="hover:text-slate-400" href="privacy.html">Privacy</a>
+                <a class="hover:text-slate-400" href="terms.html">Terms</a>
+                <a id="support-link" class="hover:text-slate-400" href="#">Contact</a>
             </div>
         </div>
     </div>
@@ -269,5 +270,6 @@
         }
     });
 </script>
+<script src="js/site_branding.js"></script>
 
 </html>

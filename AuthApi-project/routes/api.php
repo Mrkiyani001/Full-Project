@@ -11,6 +11,8 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\ShareController;
 use Illuminate\Support\Facades\Route;
 use Prism\Prism\Facades\Prism;
 use Prism\Prism\Enums\Provider;
@@ -23,6 +25,7 @@ Route::post('login', [AuthController::class, 'login']);
 Route::get('login', function () {
     return response()->json(['message' => 'Unauthorized'], 401);
 })->name('login');
+Route::get('settings', [SettingsController::class, 'index']);
 
 Route::post('forget_password', [AuthController::class, 'forget_password']);
 Route::post('reset_password', [AuthController::class, 'reset_password']);
@@ -57,7 +60,7 @@ Route::get('/gemini-models', function () {
     return response()->json(['models' => $availableModels]);
 });
 
-Route::group(['middleware' => ['api', 'auth:api']], function ($router) {
+Route::group(['middleware' => ['api', 'auth:api']], function () {
 
     Route::prefix('role')->middleware('permission:manage access')->group(function () {
         Route::post('create_role', [RolePermissionController::class, 'create_role']);
@@ -76,10 +79,12 @@ Route::group(['middleware' => ['api', 'auth:api']], function ($router) {
     Route::get('get_all_permissions', [RolePermissionController::class, 'get_all_permissions'])->middleware('permission:manage access|view access');
 
     // Admin Dashboard Routes
-    Route::prefix('admin')->middleware('permission:manage access')->group(function () {
-        Route::get('stats', [AdminController::class, 'stats']);
-        Route::post('ban_user', [AdminController::class, 'banUser']);
+    // Admin Dashboard Routes
+    Route::prefix('admin')->group(function () {
+        Route::get('stats', [AdminController::class, 'stats'])->middleware('permission:manage access|view access');
+        Route::post('ban_user', [AdminController::class, 'banUser'])->middleware('permission:manage access');
     });
+
 
     Route::post('approve_post', [PostController::class, 'Approved'])->middleware('permission:posts approve');
     Route::post('reject_post', [PostController::class, 'Rejected'])->middleware('permission:posts reject');
@@ -100,6 +105,7 @@ Route::group(['middleware' => ['api', 'auth:api']], function ($router) {
     Route::post('logout', [AuthController::class, 'logout']);
     Route::post('refresh', [AuthController::class, 'refresh_token']);
     Route::get('getallusers', [AuthController::class, 'get_all_users'])->middleware('permission:view access|manage access');
+    Route::get('filter_users', [AuthController::class, 'filter_users'])->middleware('permission:view access|manage access');
     Route::post('getUser', [AuthController::class, 'getUser']);
     Route::put('updateUser', [AuthController::class, 'update_user']);
     Route::post('updatePassword', [AuthController::class, 'update_password']);
@@ -132,6 +138,8 @@ Route::group(['middleware' => ['api', 'auth:api']], function ($router) {
     Route::post('get_comment_reactions', [ReactionController::class, 'getCommentReactions']);
     Route::post('get_reply_reactions', [ReactionController::class, 'getReplyReactions']);
 
+    Route::post('share_post', [ShareController::class, 'sharePost']);
+
     // View Routes
     Route::post('add_view_to_post', [AddViewController::class, 'addView'])->middleware('permission:view posts');
 
@@ -145,4 +153,10 @@ Route::group(['middleware' => ['api', 'auth:api']], function ($router) {
     Route::get('get_admin_notifications', [NotificationController::class, 'getAdminNotification']);
     Route::post('mark_notification_as_read', [NotificationController::class, 'markAsRead']);
     Route::get('get_unread_notification_count', [NotificationController::class, 'getUnreadCount']);
+
+    // Site Settings Routes (Admin Update)
+    Route::post('admin/settings', [SettingsController::class, 'update'])->middleware('permission:manage access');
 });
+
+// Use full namespace for public route to avoid alias issues if valid
+

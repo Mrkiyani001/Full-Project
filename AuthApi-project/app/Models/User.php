@@ -73,4 +73,8 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->following()->detach($user);
     }
+    public function shares()
+    {
+        return $this->hasMany(Share::class);
+    }
 }

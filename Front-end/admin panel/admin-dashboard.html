@@ -92,6 +92,7 @@
         const API_BASE_URL = 'http://127.0.0.1:8000/api';
         const PUBLIC_URL = 'http://127.0.0.1:8000';
     </script>
+    <script src="../js/site_branding.js"></script>
     <script src="../js/admin_utils.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -107,6 +108,9 @@
                 const response = await fetch(`${API_BASE_URL}/get_all_roles`, {
                     headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
                 });
+                
+                if(handleAdminApiError(response)) return;
+
                 const data = await response.json();
                 if(data.success) {
                     ALL_ROLES = data.data;
@@ -145,6 +149,49 @@
             document.getElementById('role-modal').classList.add('hidden');
         }
 
+        // Mobile Sidebar Toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('admin-sidebar');
+            sidebar.classList.toggle('hidden');
+            sidebar.classList.toggle('flex');
+            sidebar.classList.toggle('absolute');
+            sidebar.classList.toggle('inset-0');
+            sidebar.classList.toggle('z-50');
+            sidebar.classList.toggle('w-full');
+        }
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', (e) => {
+            const sidebar = document.getElementById('admin-sidebar');
+            const menuBtn = document.getElementById('mobile-menu-btn');
+            
+            // If sidebar is open (not hidden) AND click is NOT on sidebar AND click is NOT on menu toggle
+            if (!sidebar.classList.contains('hidden') && 
+                !sidebar.contains(e.target) && 
+                !menuBtn.contains(e.target) &&
+                window.innerWidth < 768) { // Only on mobile
+                toggleSidebar();
+            }
+        });
+
+        // Toast Notification Helper
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-6 right-6 px-6 py-4 rounded-xl backdrop-blur-md shadow-2xl transform transition-all duration-500 translate-y-20 opacity-0 z-50 flex items-center gap-3 border ${type === 'success' ? 'bg-black/80 border-green-500/30' : 'bg-black/80 border-red-500/30'}`;
+            toast.innerHTML = `
+                <span class="material-symbols-outlined ${type === 'success' ? 'text-green-400' : 'text-red-400'}">
+                    ${type === 'success' ? 'check_circle' : 'error'}
+                </span>
+                <span class="text-white font-medium text-sm">${message}</span>
+            `;
+            document.body.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.remove('translate-y-20', 'opacity-0'));
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+                setTimeout(() => toast.remove(), 500);
+            }, 3000);
+        }
+
         async function submitRoles(e) {
             e.preventDefault();
             const userId = document.getElementById('role-user-id').value;
@@ -166,6 +213,9 @@
                         role: selectedRoles // Array
                     })
                 });
+
+                if(handleAdminApiError(response)) return;
+
                 const data = await response.json();
                 
                 if(data.success) {
@@ -186,6 +236,9 @@
                 const response = await fetch(`${API_BASE_URL}/admin/stats`, {
                     headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
                 });
+
+                if(handleAdminApiError(response)) return;
+
                 const data = await response.json();
                 if (data.success) {
                     const stats = data.data;
@@ -202,19 +255,91 @@
             // Optionally update subtext if I add IDs for them
         }
 
+        let currentFilter = 'all';
+        let currentSearch = '';
+        let timer;
+
+        // Debounce search
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('searchInput');
+            if(searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    clearTimeout(timer);
+                    currentSearch = e.target.value.trim();
+                    console.log('Search Input:', currentSearch); // Debug log
+                    timer = setTimeout(() => {
+                        console.log('Triggering loadUsers with search:', currentSearch); // Debug log
+                        loadUsers(1);
+                    }, 500);
+                });
+            } else {
+                console.error('Search Input element not found!');
+            }
+        });
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            // Update UI
+            ['all', 'admins', 'moderators', 'banned', 'active'].forEach(f => {
+                const btn = document.getElementById(`btn-filter-${f}`);
+                if(f === filter) {
+                    btn.className = "px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold shadow-lg shadow-blue-500/20 transition-all";
+                } else {
+                    btn.className = "px-4 py-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white text-sm font-medium transition-all";
+                }
+            });
+            loadUsers(1);
+        }
+
         async function loadUsers(page = 1) {
             const tableBody = document.getElementById('user-table-body');
             tableBody.innerHTML = `<tr><td colspan="5" class="px-6 py-20 text-center text-slate-500">Loading users...</td></tr>`;
 
             try {
-                const response = await fetch(`${API_BASE_URL}/getallusers?page=${page}&limit=10`, {
-                    headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
-                });
+                let url;
+                let options = {
+                    headers: { 
+                        'Authorization': `Bearer ${ADMIN_TOKEN}`
+                    }
+                };
+
+                if (currentSearch) {
+                    url = `${API_BASE_URL}/search_user?page=${page}`; 
+                    options.method = 'POST';
+                    options.headers['Content-Type'] = 'application/json';
+                    options.body = JSON.stringify({
+                        search: currentSearch,
+                        limit: currentLimit
+                    });
+                } else if (currentFilter !== 'all') {
+                    url = `${API_BASE_URL}/filter_users?page=${page}&limit=${currentLimit}&filter=${currentFilter}`;
+                    options.method = 'GET';
+                } else {
+                    url = `${API_BASE_URL}/getallusers?page=${page}&limit=${currentLimit}`;
+                    options.method = 'GET';
+                }
+
+                console.log('Fetching Users:', url, options); // Debugging
+
+                const response = await fetch(url, options);
+                
+                if(handleAdminApiError(response)) return;
+
+                // Check if response is ok (status 200-299)
+                // Check if response is ok (status 200-299)
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({})); // Safely try to parse JSON
+                    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                }
+
                 const data = await response.json();
 
                 if (data.success) {
                     renderUserTable(data.data.items);
                     renderPagination(data.data.pagination);
+                } else {
+                     tableBody.innerHTML = `<tr><td colspan="5" class="px-6 py-20 text-center text-slate-500">${data.message || 'No users found.'}</td></tr>`;
+                     document.getElementById('pagination-footer').innerHTML = '';
                 }
             } catch (e) {
                 console.error(e);
@@ -235,6 +360,9 @@
                     },
                     body: JSON.stringify({ user_id: userId, action: action })
                 });
+
+                if(handleAdminApiError(response)) return;
+
                 const data = await response.json();
                 if(data.success) {
                     // alert(`User ${action}ned successfully`);
@@ -253,8 +381,19 @@
             users.forEach(user => {
                 const roles = (user.roles || []).map(r => typeof r === 'object' ? r.name : r).join(', ');
                 const initials = (user.name || 'U')[0].toUpperCase();
-                const avatar = user.profile?.avatar 
-                    ? `${PUBLIC_URL}/${user.profile.avatar}` 
+                
+                // Fix for avatar handling (might be object or string)
+                let avatarPath = null;
+                if (user.profile && user.profile.avatar) {
+                    if (typeof user.profile.avatar === 'object') {
+                         avatarPath = user.profile.avatar.file_path || user.profile.avatar.file_name;
+                    } else {
+                         avatarPath = user.profile.avatar;
+                    }
+                }
+
+                const avatar = avatarPath 
+                    ? `${PUBLIC_URL}/${avatarPath}` 
                     : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=2d3748&color=fff`;
                 
                 const joinedDate = new Date(user.created_at).toLocaleDateString();
@@ -314,13 +453,26 @@
             return 'bg-blue-500/10 text-blue-300 border border-blue-500/10';
         }
 
+        let currentLimit = 10; // Global limit variable
+
         function renderPagination(pagination) {
             const footer = document.getElementById('pagination-footer');
             const { current_page, total_pages, total, from, to } = pagination;
             
             footer.innerHTML = `
-                <div class="text-sm text-slate-500">
-                    Showing <span class="text-white font-semibold">${from}-${to}</span> of <span class="text-white font-semibold">${total}</span>
+                <div class="flex items-center gap-4 text-sm text-slate-500">
+                    <div>
+                        Showing <span class="text-white font-semibold">${from || 0}-${to || 0}</span> of <span class="text-white font-semibold">${total}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span>Rows per page:</span>
+                        <select onchange="updateLimit(this.value)" class="bg-[#1e2330] border border-white/10 text-white text-xs rounded-lg px-2 py-1 focus:ring-1 focus:ring-primary outline-none">
+                            <option value="10" ${currentLimit == 10 ? 'selected' : ''}>10</option>
+                            <option value="20" ${currentLimit == 20 ? 'selected' : ''}>20</option>
+                            <option value="50" ${currentLimit == 50 ? 'selected' : ''}>50</option>
+                            <option value="100" ${currentLimit == 100 ? 'selected' : ''}>100</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <button onclick="loadUsers(${current_page - 1})" ${current_page === 1 ? 'disabled' : ''} 
@@ -334,6 +486,11 @@
                     </button>
                 </div>
             `;
+        }
+        
+        function updateLimit(newLimit) {
+            currentLimit = parseInt(newLimit);
+            loadUsers(1); // Reset to page 1
         }
     </script>
         <aside id="admin-sidebar" class="hidden md:flex flex-col w-72 h-full glass-panel-heavy border-r border-white/5 z-20 shrink-0">
@@ -399,6 +556,10 @@
                     <span class="material-symbols-outlined group-hover:scale-110 transition-transform">help</span>
                     <span class="text-sm font-medium">Support</span>
                 </a>
+                <a href="../homefeed-dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all group mt-auto mb-4 border-t border-white/5 pt-4">
+                    <span class="material-symbols-outlined group-hover:scale-110 transition-transform">arrow_back</span>
+                    <span class="text-sm font-medium">Back to Home</span>
+                </a>
             </nav>
             <!-- Bottom Action -->
             <div class="p-4 border-t border-white/5">
@@ -419,7 +580,7 @@
                     </div>
                     <span class="font-bold text-white">Admin Panel</span>
                 </div>
-                <button class="text-white p-2">
+                <button id="mobile-menu-btn" class="text-white p-2" onclick="toggleSidebar()">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
             </header>
@@ -434,15 +595,10 @@
                             <p class="text-slate-400 text-base">Manage access, roles, and platform security.</p>
                         </div>
                         <div class="flex gap-3">
-                            <button
+                            <button onclick="showToast('Export functionality coming soon!', 'success')"
                                 class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#282d39] hover:bg-[#323846] text-white text-sm font-medium border border-white/10 transition-colors">
                                 <span class="material-symbols-outlined text-[20px]">download</span>
                                 Export
-                            </button>
-                            <button
-                                class="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary hover:bg-blue-600 text-white text-sm font-bold shadow-[0_0_20px_rgba(33,91,237,0.3)] hover:shadow-[0_0_25px_rgba(33,91,237,0.5)] transition-all">
-                                <span class="material-symbols-outlined text-[20px]">add</span>
-                                Add User
                             </button>
                         </div>
                     </div>
@@ -521,27 +677,31 @@
                                 class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500 group-focus-within:text-primary transition-colors">
                                 <span class="material-symbols-outlined">search</span>
                             </div>
-                            <input
+                            <input id="searchInput"
                                 class="block w-full p-3 pl-10 text-sm text-white bg-background-dark/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary placeholder-slate-500 transition-all"
                                 placeholder="Search users by name, email or ID..." type="text" />
                         </div>
                         <!-- Filter Chips -->
                         <div class="flex gap-2 overflow-x-auto pb-2 lg:pb-0 w-full lg:w-auto no-scrollbar">
-                            <button
+                            <button id="btn-filter-all" onclick="setFilter('all')"
                                 class="whitespace-nowrap px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/20 text-sm font-semibold hover:bg-primary/30 transition-all">
                                 All Users
                             </button>
-                            <button
+                            <button id="btn-filter-admins" onclick="setFilter('admins')"
                                 class="whitespace-nowrap px-4 py-2 rounded-lg bg-background-dark/30 text-slate-400 border border-white/10 text-sm font-medium hover:bg-white/5 hover:text-white transition-all">
                                 Admins
                             </button>
-                            <button
+                            <button id="btn-filter-moderators" onclick="setFilter('moderators')"
                                 class="whitespace-nowrap px-4 py-2 rounded-lg bg-background-dark/30 text-slate-400 border border-white/10 text-sm font-medium hover:bg-white/5 hover:text-white transition-all">
                                 Moderators
                             </button>
-                            <button
+                            <button id="btn-filter-banned" onclick="setFilter('banned')"
                                 class="whitespace-nowrap px-4 py-2 rounded-lg bg-background-dark/30 text-slate-400 border border-white/10 text-sm font-medium hover:bg-white/5 hover:text-white transition-all">
                                 Banned
+                            </button>
+                            <button id="btn-filter-active" onclick="setFilter('active')"
+                                class="whitespace-nowrap px-4 py-2 rounded-lg bg-background-dark/30 text-slate-400 border border-white/10 text-sm font-medium hover:bg-white/5 hover:text-white transition-all">
+                                Active Users
                             </button>
                         </div>
                     </div>

@@ -3,6 +3,8 @@
 namespace App\Jobs;
 
 use App\Models\Post;
+use App\Models\User;
+use App\Jobs\SendNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
@@ -20,16 +22,18 @@ class AddPost implements ShouldQueue
     public $body;
     public $attachments;
     public $is_approved;
+    public $original_post_id;
     /**
      * Create a new job instance.
      */
-    public function __construct($user_id, $title, $body, $attachments = [], $is_approved = false)
+    public function __construct($user_id, $title, $body, $attachments = [], $is_approved = false, $original_post_id = null)
     {
         $this->user_id = $user_id;
         $this->title = $title;
         $this->body = $body;
         $this->attachments = $attachments;
         $this->is_approved = $is_approved;
+        $this->original_post_id = $original_post_id;
     }
 
     /**
@@ -43,6 +47,7 @@ class AddPost implements ShouldQueue
             'body' => $this->body,
             'created_by' => $this->user_id,
             'updated_by' => $this->user_id,
+            'original_post_id' => $this->original_post_id,
         ];
 
         if ($this->is_approved) {
@@ -81,6 +86,18 @@ class AddPost implements ShouldQueue
             }
         } catch (\Exception $e) {
             Log::error("Failed to upload attachments for post ID " . $post->id . ": " . $e->getMessage());
+        }
+
+        // Dispatch Notification after successful creation
+        if ($user = User::find($this->user_id)) {
+            SendNotification::dispatch(
+                $user->id,
+                'New Post',
+                $user->name . ' created a new post.',
+                $user->id,
+                $user, // Notifiable
+                'Y'
+            );
         }
     }
 }

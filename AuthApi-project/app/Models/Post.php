@@ -20,14 +20,8 @@ class Post extends Model
         'status',
         'moderated_at',
         'moderated_by',
+        'original_post_id',
     ];
-
-
-
-    const Post_Is_Submitted  = 1;
-    const Post_Under_Moderation = 2;
-    const Post_Is_Rejected = 3;
-    const Post_Is_Approved = 4;
 
     protected $casts = [
         'moderated_at' => 'datetime',
@@ -69,5 +63,13 @@ class Post extends Model
     public function notification()
     {
         return $this->morphMany(Notification::class, 'notifiable');
+    }
+    public function shares()
+    {
+        return $this->hasMany(Share::class);
+    }
+    public function originalPost()
+    {
+        return $this->belongsTo(Post::class, 'original_post_id');
     }
 }
