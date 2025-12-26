@@ -113,6 +113,10 @@ class PostController extends BaseController
                     $newuploadfiles[] = $filename;
                 }
             }
+            $is_approved = false;
+            if ($user->hasRole(['admin', 'super admin', 'moderator'])) {
+                $is_approved = true;
+            }
 
             UpdatePost::dispatch(
                 $user->id,
@@ -120,7 +124,8 @@ class PostController extends BaseController
                 $request->title,
                 $request->body,
                 $request->remove_attachments,
-                $newuploadfiles
+                $newuploadfiles,
+                $is_approved
             );
             return response()->json([
                 'success' => true,
@@ -213,7 +218,11 @@ class PostController extends BaseController
             if (!$user) {
                 return $this->unauthorized();
             }
-            $posts = Post::with('attachments', 'creator', 'updator', 'user.profile.avatar', 'originalPost.creator', 'originalPost.attachments')
+            $posts = Post::with(['attachments', 'creator', 'updator', 'user.profile.avatar', 'originalPost.creator', 'originalPost.attachments', 
+                'user.followers' => function ($q) use ($user) {
+                    $q->where('follower_id', $user->id)->where('status', 'accepted');
+                }
+            ])
                 ->withExists(['reactions as is_liked' => function ($q) use ($user) {
                     $q->where('created_by', $user->id)->where('type', 1);
                 }])
@@ -280,6 +289,16 @@ class PostController extends BaseController
             }
 
             $post->markApproved();
+            
+            // Notify the Post Creator
+            SendNotification::dispatch(
+                $post->user_id, // Recipient: Post Creator
+                'Post Approved',
+                'Your post has been approved.',
+                $user->id,      // Trigger: Admin
+                $post,
+                'N'
+            );
 
             return response()->json([
                 'success' => true,
@@ -312,6 +331,16 @@ class PostController extends BaseController
             }
 
             $post->markRejected();
+            
+            // Notify the Post Creator
+            SendNotification::dispatch(
+                $post->user_id, // Recipient: Post Creator
+                'Post Rejected',
+                'Your post has been rejected due to content violations.',
+                $user->id,      // Trigger: Admin
+                $post,
+                'N'
+            );
 
             return response()->json([
                 'success' => true,

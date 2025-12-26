@@ -102,12 +102,21 @@ const NotificationService = {
     },
 
     async handleNotificationClick(notification) {
+        console.log("Notification Clicked:", notification); // Debug Log
         await this.markOneAsRead(notification.id);
         
         // Determine redirect path based on notifiable_type or content
-        // This depends on how the backend structures the notification text/data
         if (notification.notifiable_type.includes('Post')) {
-            window.location.href = `post-detail-veiw.html?id=${notification.notifiable_id}`;
+            // Admin Redirect for Flagged Posts
+            if (notification.title.includes('Flagged') || notification.title.includes('Review')) {
+                const targetUrl = 'admin%20panel/moderation-queue.html';
+                console.log("Redirecting to Admin Queue:", targetUrl);
+                window.location.href = targetUrl;
+            } else {
+                const targetUrl = `post-detail-veiw.html?id=${notification.notifiable_id}`;
+                console.log("Redirecting to Post:", targetUrl);
+                window.location.href = targetUrl;
+            }
             // Handle Follow Request redirects
         } else if (notification.notifiable_type.includes('User')) {
             if (notification.title.includes('Request') || notification.title.includes('New Follower')) {

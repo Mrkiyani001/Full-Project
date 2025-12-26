@@ -154,7 +154,7 @@ Route::group(['middleware' => ['api', 'auth:api']], function () {
     Route::post('resolve_report', [ReportController::class, 'resolveReport'])->middleware('permission:reports resolve');
 
     // Notification Routes
-    Route::get('get_user_notifications', [NotificationController::class, 'getUsersNotification']);
+    Route::get('get_user_notifications', [NotificationController::class, 'getNotification']);
     Route::get('get_admin_notifications', [NotificationController::class, 'getAdminNotification']);
     Route::post('mark_notification_as_read', [NotificationController::class, 'markAsRead']);
     Route::get('get_unread_notification_count', [NotificationController::class, 'getUnreadCount']);

@@ -354,11 +354,51 @@ document.addEventListener('DOMContentLoaded', () => {
     checkAndRenderAdminLink();
 });
 
+/**
+ * Formats a date string into a "Time Ago" format (e.g., "2 hours ago", "Just now").
+ * @param {String} dateString ISO 8601 date string
+ * @returns {String} Formatted time string
+ */
+function timeAgo(dateString) {
+    if (!dateString) return '';
+    
+    // Ensure we parse as UTC if no timezone is specified
+    // Laravel typically sends "YYYY-MM-DD HH:mm:ss" which JS can interpret as local
+    let safeDateString = dateString;
+    if (!dateString.endsWith('Z') && !dateString.includes('+')) {
+        safeDateString += 'Z';
+    }
+
+    const date = new Date(safeDateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    // Handle future dates (clocks slightly off)
+    if (seconds < 0) return "Just now";
+    
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + " years ago";
+    
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + " months ago";
+    
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + " days ago";
+    
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + " hours ago";
+    
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + " minutes ago";
+    
+    return "Just now";
+}
+
 function createPostHTML(post) {
     // Determine which user object to use (handle potential variations)
     const user = post.user || { name: 'Unknown', id: 0 };
     const avatarUrl = getAvatarUrl(user);
-    const timeAgo = new Date(post.created_at).toLocaleDateString();
+    const timeAgoStr = timeAgo(post.created_at);
     
     // Normalize self-reference for avatar in comments
     const myName = (typeof currentUserData !== 'undefined' && currentUserData.name) ? currentUserData.name : 
@@ -403,11 +443,17 @@ function createPostHTML(post) {
                 <div class="flex-1">
                     <div class="flex justify-between items-start">
                         <div>
-                            <h3 class="text-white font-bold text-sm cursor-pointer hover:underline" onclick="window.location.href='profile.html?id=${user.id}'">${user.name}</h3>
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-white font-bold text-sm cursor-pointer hover:underline" onclick="window.location.href='profile.html?id=${user.id}'">${user.name}</h3>
+                                ${(!user.followers || user.followers.length === 0) && (user.id !== (currentUserData?.id || userData?.id)) ? 
+                                    `<span class="bg-primary/20 text-primary text-[10px] px-1.5 py-0.5 rounded font-bold">Suggested</span>` : ''}
+                            </div>
                             <div class="flex items-center gap-2 text-secondary-text text-sm mt-0.5">
                                 <span>@${user.name.replace(/\s+/g, '').toLowerCase()}</span>
                                 <span class="text-[8px] opacity-50">●</span>
-                                <span>${timeAgo}</span>
+                                <span>${timeAgoStr}</span>
+                                ${(!user.followers || user.followers.length === 0) && (user.id !== (currentUserData?.id || userData?.id)) ? 
+                                    `<button onclick="followUserDashboard(this, ${user.id}); event.stopPropagation();" class="ml-2 text-primary text-xs font-bold hover:underline bg-transparent border-none p-0">Follow</button>` : ''}
                             </div>
                         </div>
                         
@@ -641,7 +687,7 @@ async function toggleCommentSection(postId) {
                                         <div class="bg-white/5 rounded-xl p-2 px-3 border border-white/10">
                                             <div class="flex justify-between items-start mb-0.5">
                                                 <h4 class="font-bold text-white text-[11px] cursor-pointer hover:underline" onclick="window.location.href='profile.html?id=${replyUser.id}'">${replyUser.name}</h4>
-                                                <span class="text-[9px] text-slate-500">${new Date(reply.created_at).toLocaleDateString()}</span>
+                                                <span class="text-[9px] text-slate-500">${timeAgo(reply.created_at)}</span>
                                             </div>
                                             <p class="text-slate-300 text-xs whitespace-pre-wrap">${reply.reply}</p>
                                         </div>
@@ -669,7 +715,7 @@ async function toggleCommentSection(postId) {
                                 <div class="bg-white/5 rounded-xl p-3 border border-white/10">
                                     <div class="flex justify-between items-start mb-1">
                                         <h4 class="font-bold text-white text-xs cursor-pointer hover:underline" onclick="window.location.href='profile.html?id=${user.id}'">${user.name}</h4>
-                                        <span class="text-[10px] text-slate-500">${new Date(comment.created_at).toLocaleDateString()}</span>
+                                        <span class="text-[10px] text-slate-500">${timeAgo(comment.created_at)}</span>
                                     </div>
                                     <p class="text-slate-300 text-sm whitespace-pre-wrap">${comment.comment}</p>
                                 </div>

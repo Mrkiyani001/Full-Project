@@ -248,8 +248,9 @@
             }
 
             try {
+                console.log('Fetching Stats...'); // Debug Log
                 const response = await fetch(`${API_BASE_URL}/admin/stats`, {
-                    headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+                    headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` }
                 });
 
                 // if(handleAdminApiError(response)) return; // Don't redirect on background refresh? 
@@ -392,7 +393,7 @@
                 const response = await fetch(`${API_BASE_URL}/admin/ban_user`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${ADMIN_TOKEN}`,
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ user_id: userId, action: action })

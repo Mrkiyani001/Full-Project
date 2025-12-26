@@ -36,29 +36,24 @@ class ProcessPendingPosts extends Command
         // Let's use the scope provided by trait if possible, generally `pending()` scope.
         // Hootlex/Laravel-Moderation usually provides `pending()` scope.
         
-        // Use the package scope for pending posts (Status 0)
+        // Only fetch Flagged Pending posts older than 2 days
         $posts = Post::pending()
+                      ->where('is_flagged', 1)
                       ->where('created_at', '<', now()->subDays(2))
                       ->get();
 
         $count = $posts->count();
         if ($count === 0) {
-            $this->info('No pending posts older than 2 days found.');
+            $this->info('No flagged pending posts older than 2 days found.');
             return;
         }
 
-        $this->info("Found {$count} posts to process.");
+        $this->info("Found {$count} flagged posts to process.");
 
         foreach ($posts as $post) {
-            if ($post->is_flagged == 1) {
-                // Reject
-                $post->markRejected();
-                $this->warn("Post ID {$post->id} REJECTED (Flagged).");
-            } else {
-                // Approve
-                $post->markApproved();
-                $this->info("Post ID {$post->id} APPROVED (Clean).");
-            }
+            // Reject Flagged Post
+            $post->markRejected();
+            $this->warn("Post ID {$post->id} REJECTED (Flagged).");
         }
 
         $this->info('Processing complete.');

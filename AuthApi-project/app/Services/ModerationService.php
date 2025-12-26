@@ -51,7 +51,7 @@ class ModerationService
     private function checkKeywords(string $text): bool
     {
         $keywords = config('keywords.keywords', []);
-
+        
         foreach ($keywords as $keyword) {
             if (Str::contains(strtolower($text), strtolower($keyword))) {
                 return true;

@@ -41,6 +41,8 @@ class AddPost implements ShouldQueue
      */
     public function handle(ModerationService $moderationService): void
     {
+        Log::info("AddPost Job Started for User ID: {$this->user_id}");
+        
         $postData = [
             'user_id' => $this->user_id,
             'title' => $this->title,
@@ -55,49 +57,104 @@ class AddPost implements ShouldQueue
             // $postData['is_published'] = 1; // Uncomment if column exists
         }
 
-        $post = Post::create($postData);
+        try {
+            $post = Post::create($postData);
+            Log::info("Post Created in DB with ID: {$post->id}");
+        } catch (\Exception $e) {
+            Log::error("Failed to create post in DB: " . $e->getMessage());
+            return; // Exit if post creation fails
+        }
 
         // Run Moderation Logic only if NOT approved
         if (!$this->is_approved) {
             try {
+                Log::info("Running Moderation for Post ID: {$post->id}");
                 $moderationService->moderate($post, $this->body);
+                
+                $post->refresh();
+                Log::info("Moderation Complete. Flagged Status: " . ($post->is_flagged ? 'Yes' : 'No'));
+
+                if ($post->is_flagged == 0) {
+                    $post->update(['status' => 1]);
+                    Log::info("Post ID {$post->id} marked as Active (Status 1).");
+                    
+                    SendNotification::dispatch(
+                        $this->user_id,
+                        'Post Created',
+                        'Your post has been successfully created.',
+                        $this->user_id,
+                        $post,
+                        'N'
+                    );
+                } else {
+                    // Post is Flagged -> Notify Admins AND User
+                    Log::info("Post ID {$post->id} is Flagged. Notifying Admins.");
+                    
+                    // Notify User
+                     SendNotification::dispatch(
+                        $this->user_id,
+                        'Post Under Moderation',
+                        'Your post contains sensitive content and is under moderation.',
+                        $this->user_id,
+                        $post,
+                        'N'
+                    );
+
+                    // Notify Admins
+                    try {
+                        $creator = User::find($this->user_id);
+                        $creatorName = $creator ? $creator->name : 'Unknown User';
+                        
+                        $admins = User::role(['admin', 'super admin', 'moderator'])->get();
+                        foreach ($admins as $admin) {
+                            if ($admin->id !== $this->user_id) {
+                                SendNotification::dispatch(
+                                    $admin->id,
+                                    'Flagged Post Alert',
+                                    "User {$creatorName} posted content flagged by auto-moderation.",
+                                    $admin->id,
+                                    $post,
+                                    'Y'
+                                );    
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        Log::error("Failed to notify admins of flagged post: " . $e->getMessage());
+                    }
+                }
             } catch (\Exception $e) {
-                Log::error("Moderation Failed for Post ID {$post->id}: " . $e->getMessage());
+                Log::error("Moderation Logic Failed for Post ID {$post->id}: " . $e->getMessage());
             }
+        } else {
+             // If manually approved (e.g. by admin posting), just notify user/followers if needed
+             // For now, just log
+             Log::info("Post ID {$post->id} auto-approved (Admin/Moderator).");
         }
 
-        if (empty($this->attachments)) return;
-        try {
-            foreach ($this->attachments as $filename) {
-                $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-                $type = match (true) {
-                    in_array($extension, ['jpg', 'jpeg', 'png', 'gif']) => 'image',
-                    in_array($extension, ['mp4', 'avi', 'mov']) => 'video',
-                    $extension === 'pdf' => 'pdf',
-                    in_array($extension, ['doc', 'docx']) => 'word',
-                    in_array($extension, ['zip', 'rar', '7z']) => 'zip',
-                    default => 'other',
-                };
-                $post->attachments()->create([
-                    'file_name' => $filename,
-                    'file_type' => $type,
-                    'file_path' => 'posts/' . $filename,
-                ]);
+        if (!empty($this->attachments)) {
+            try {
+                foreach ($this->attachments as $filename) {
+                    $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                    $type = match (true) {
+                        in_array($extension, ['jpg', 'jpeg', 'png', 'gif']) => 'image',
+                        in_array($extension, ['mp4', 'avi', 'mov']) => 'video',
+                        $extension === 'pdf' => 'pdf',
+                        in_array($extension, ['doc', 'docx']) => 'word',
+                        in_array($extension, ['zip', 'rar', '7z']) => 'zip',
+                        default => 'other',
+                    };
+                    $post->attachments()->create([
+                        'file_name' => $filename,
+                        'file_type' => $type,
+                        'file_path' => 'posts/' . $filename,
+                    ]);
+                }
+                Log::info("Attachments uploaded for Post ID {$post->id}");
+            } catch (\Exception $e) {
+                Log::error("Failed to upload attachments for post ID " . $post->id . ": " . $e->getMessage());
             }
-        } catch (\Exception $e) {
-            Log::error("Failed to upload attachments for post ID " . $post->id . ": " . $e->getMessage());
         }
-
-        // Dispatch Notification after successful creation
-        if ($user = User::find($this->user_id)) {
-            SendNotification::dispatch(
-                $user->id,
-                'New Post',
-                $user->name . ' created a new post.',
-                $user->id,
-                $user, // Notifiable
-                'Y'
-            );
-        }
+        
+        Log::info("AddPost Job Finished for Post ID: {$post->id}");
     }
 }

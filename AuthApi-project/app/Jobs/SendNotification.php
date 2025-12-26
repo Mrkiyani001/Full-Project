@@ -34,22 +34,32 @@ class SendNotification implements ShouldQueue
      */
     public function handle(): void
     {
-        try{
-        $notification = new Notification();
-        $notification->title = $this->title;
-        $notification->text = $this->text;
-        if($this->notifiable){
-            $notification->notifiable()->associate($this->notifiable);
-        }
-        $notification->user_id = $this->user_id;
-        $notification->for_admin = $this->for_admin;
-        $notification->created_by = $this->CreatorId;
-        $notification->updated_by = $this->CreatorId;
-        $notification->save();
-    }catch(\Exception $e){
-        Log::error('Failed to send notification: ' . $e->getMessage(),[
-            'trace'=>$e->getTraceAsString()
+        Log::info("SendNotification Job Started", [
+            'CreatorId' => $this->CreatorId,
+            'RecipientId' => $this->user_id,
+            'Title' => $this->title,
+            'ForAdmin' => $this->for_admin
         ]);
-    }
+
+        try{
+            $notification = new Notification();
+            $notification->title = $this->title;
+            $notification->text = $this->text;
+            if($this->notifiable){
+                $notification->notifiable()->associate($this->notifiable);
+            }
+            $notification->user_id = $this->user_id;
+            $notification->for_admin = $this->for_admin;
+            $notification->created_by = $this->CreatorId;
+            $notification->updated_by = $this->CreatorId;
+            $notification->save();
+            
+            Log::info("Notification Saved Successfully", ['id' => $notification->id]);
+            
+        }catch(\Exception $e){
+            Log::error('Failed to send notification: ' . $e->getMessage(),[
+                'trace'=>$e->getTraceAsString()
+            ]);
+        }
     }
 }
