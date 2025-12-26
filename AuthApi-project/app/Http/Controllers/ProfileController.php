@@ -25,8 +25,23 @@ class ProfileController extends BaseController
             }
 
             // User data ka sath Profile, Followers, or Following load kro
-            $user = User::with(['profile.avatar', 'followers.profile.avatar', 'following.profile.avatar'])
-                ->withCount(['followers', 'following'])
+            $user = User::with([
+                'profile.avatar',
+                'followers' => function ($q) {
+                    $q->wherePivot('status', 'accepted')->with('profile.avatar');
+                },
+                'following' => function ($q) {
+                    $q->wherePivot('status', 'accepted')->with('profile.avatar');
+                }
+            ])
+                ->withCount([
+                    'followers' => function ($q) {
+                        $q->where('followers.status', 'accepted');
+                    }, // 'followers' table alias is usually 'followers' ? No, eloquent relation count
+                    'following' => function ($q) {
+                        $q->where('followers.status', 'accepted');
+                    }
+                ])
                 ->find($userId);
 
             if (!$user) {
@@ -39,6 +54,11 @@ class ProfileController extends BaseController
             if ($userId !== $user->id && $user->show_email == false) {
                 $user->makeHidden(['email']);
             }
+
+            // Connection Status Logic Here Use function CheckfollowStatus from uSER MODEL
+            $loggedInUser = auth('api')->user();
+            $user->connection_status = $loggedInUser ? $loggedInUser->getFollowStatus($user->id) : 'none';
+
             return response()->json([
                 'success' => true,
                 'message' => 'Profile retrieved successfully',
@@ -178,21 +198,86 @@ class ProfileController extends BaseController
                 return $this->Response(false, 'You are already following this user', null, 400);
             }
 
-            $user->follow($request->user_id);
+            $status = 'pending';
+            $user->follow($request->user_id, ['status' => $status]);
 
             // Notification Logic
             $followedUser = User::find($request->user_id);
             if ($followedUser) {
-                SendNotification::dispatch(
+                SendNotification::dispatchSync(
                     $user->id,
                     'New Follower',
-                    $user->name . ' started following you.',
+                    $user->name . ' sent you a follow request.',
                     $followedUser->id,
                     $followedUser, // Notifiable is the User model
                     'N'
                 );
             }
-            return $this->Response(true, 'User followed successfully', null);
+            return $this->Response(true, 'Follow request sent successfully', ['status' => $status]);
+        } catch (Exception $e) {
+            return $this->Response(false, $e->getMessage(), null, 500);
+        }
+    }
+    public function acceptFollowRequest(Request $request)
+    {
+        $this->validateRequest($request, [
+            'user_id' => 'required|integer|exists:users,id',
+        ]);
+        try {
+            $user = auth('api')->user();
+            if (!$user) {
+                return $this->unauthorized();
+            }
+            if ($user->id == $request->user_id) {
+                return $this->Response(false, 'You cannot follow yourself', null, 400);
+            }
+            // Check if the user is actually in the followers list (i.e. has sent a request)
+            if (!$user->followers()->where('users.id', $request->user_id)->exists()) {
+                return $this->Response(false, 'This user has not requested to follow you', null, 400);
+            }
+            $user->followers()->updateExistingPivot($request->user_id, ['status' => 'accepted']);
+
+            // Notification Logic - Notify the requester
+            $requester = User::find($request->user_id);
+            if ($requester) {
+                SendNotification::dispatchSync(
+                    $user->id,
+                    'Request Accepted',
+                    $user->name . ' accepted your follow request.',
+                    $requester->id,
+                    $user, // Notifiable is the User who accepted (so clicking goes to their profile)
+                    'N'
+                );
+            }
+
+            return $this->Response(true, 'Follow request accepted successfully', null);
+        } catch (Exception $e) {
+            return $this->Response(false, $e->getMessage(), null, 500);
+        }
+    }
+    public function rejectFollowRequest(Request $request)
+    {
+        $this->validateRequest($request, [
+            'user_id' => 'required|integer|exists:users,id',
+        ]);
+        try {
+            $user = auth('api')->user();
+            if (!$user) {
+                return $this->unauthorized();
+            }
+            if ($user->id == $request->user_id) {
+                return $this->Response(false, 'You cannot follow yourself', null, 400);
+            }
+            if (!$user->followers()->where('users.id', $request->user_id)->exists()) {
+                return $this->Response(false, 'This user has not requested to follow you', null, 400);
+            }
+
+            // Just detach (delete) the request. verifying the pivot keys are correct in User model
+            // relations: followers() -> table 'followers', foreignKey 'following_id', relatedKey 'follower_id'
+            // We are $user (following_id), we want to remove $request->user_id (follower_id)
+            $user->followers()->detach($request->user_id);
+
+            return $this->Response(true, 'Follow request deleted successfully', null);
         } catch (Exception $e) {
             return $this->Response(false, $e->getMessage(), null, 500);
         }
@@ -225,7 +310,9 @@ class ProfileController extends BaseController
             'user_id' => 'required|integer|exists:users,id',
         ]);
         try {
-            $user = User::with('followers')->find($request->user_id);
+            $user = User::with(['followers' => function ($q) {
+                $q->wherePivot('status', 'accepted')->with('profile.avatar');
+            }])->find($request->user_id);
             if (!$user) {
                 return $this->Response(false, 'User not found', null, 404);
             }
@@ -234,17 +321,120 @@ class ProfileController extends BaseController
             return $this->Response(false, $e->getMessage(), null, 500);
         }
     }
-    public function fetchFollowing(Request $request)
+    public function fetchPendingRequests(Request $request)
     {
-        $this->validateRequest($request, [
-            'user_id' => 'required|integer|exists:users,id',
-        ]);
         try {
-            $user = User::with('following')->find($request->user_id);
+            $user = auth('api')->user();
+            if (!$user) {
+                return $this->unauthorized();
+            }
+            // Get users who have a 'pending' follow status towards the current user
+            $limit = $request->input('limit', 10);
+            
+            $query = $user->followers()
+                ->wherePivot('status', 'pending')
+                ->with('profile.avatar');
+
+            $paginator = $query->paginate($limit);
+            $data = $this->paginateData($paginator, $paginator->items());
+
+            return $this->Response(true, 'Pending requests', $data);
+        } catch (Exception $e) {
+            return $this->Response(false, $e->getMessage(), null, 500);
+        }
+    }
+
+    public function fetchFollowing(Request $request) 
+    {
+        // Renamed/Used as 'fetchMyFriends' logic if user_id not passed
+        // Or specific user friends if id passed
+        try {
+            $targetUserId = $request->input('user_id') ?? auth('api')->id();
+            
+            $user = User::find($targetUserId);
             if (!$user) {
                 return $this->Response(false, 'User not found', null, 404);
             }
-            return $this->Response(true, 'User following retrieved successfully', $user->following);
+
+            $limit = $request->input('limit', 10);
+
+            // Fetch following with 'accepted' status
+            $query = $user->following()
+                ->wherePivot('status', 'accepted')
+                ->with('profile.avatar');
+
+            $paginator = $query->paginate($limit);
+            $data = $this->paginateData($paginator, $paginator->items());
+
+            return $this->Response(true, 'User following retrieved successfully', $data);
+        } catch (Exception $e) {
+            return $this->Response(false, $e->getMessage(), null, 500);
+        }
+    }
+    public function fetchSuggestions(Request $request)
+    {
+        try {
+            $user = auth('api')->user();
+            if (!$user) {
+                return $this->unauthorized();
+            }
+
+            // Exclude:
+            // 1. Self
+            // 2. Users I am already following (status doesn't matter for exclusion, if I follow them or requested, dont suggest)
+            // 3. Users who are following me (optional, but maybe we want to suggest them? stick to basic for now)
+
+            // Get IDs I am following (pending or accepted)
+            $following = $user->following()->pluck('users.id')->toArray();
+
+            // Also exclude users who are following me (Pending or Accepted)
+            // If they follow me, they are already "connected" in a way, or if they are pending, they are in requests.
+            $follower = $user->followers()->pluck('users.id')->toArray();
+
+            $excluded = array_merge([$user->id], $following, $follower);
+
+            // Get random users not in excluded list
+            $limit = $request->input('limit', 20);
+            
+            $query = User::whereNotIn('id', $excluded)
+                ->with('profile.avatar')
+                ->inRandomOrder(); // Random order for suggestions
+            
+            $paginator = $query->paginate($limit);
+            $data = $this->paginateData($paginator, $paginator->items());
+
+            return $this->Response(true, 'Suggestions retrieved', $data);
+        } catch (Exception $e) {
+            return $this->Response(false, $e->getMessage(), null, 500);
+        }
+    }
+
+    public function fetchWhoToFollow(Request $request) 
+    {
+        try {
+            $user = auth('api')->user();
+            if (!$user) {
+                return $this->unauthorized();
+            }
+
+            $limit = $request->input('limit', 10);
+
+            // Get IDs of people I am already following (Accepted or Pending)
+            $iamFollowingIds = $user->following()->pluck('users.id')->toArray();
+            
+            // Also exclude myself
+            $excluded = array_merge([$user->id], $iamFollowingIds);
+
+            // Logic: Users who follow ME (accepted) BUT I don't follow them
+            $query = $user->followers()
+                ->wherePivot('status', 'accepted')
+                ->whereNotIn('users.id', $excluded)
+                ->with('profile.avatar');
+
+            $paginator = $query->paginate($limit);
+            $data = $this->paginateData($paginator, $paginator->items());
+
+            return $this->Response(true, 'Who to follow retrieved', $data);
         } catch (Exception $e) {
             return $this->Response(false, $e->getMessage(), null, 500);
         }

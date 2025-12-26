@@ -55,19 +55,19 @@ class User extends Authenticatable implements JWTSubject
     }
     public function followers()
     {
-        return $this->belongsToMany(User::class,'followers','following_id','follower_id');
+        return $this->belongsToMany(User::class,'followers','following_id','follower_id')->withPivot('status')->withTimestamps();
     }
     public function following()
     {
-        return $this->belongsToMany(User::class,'followers','follower_id','following_id');
+        return $this->belongsToMany(User::class,'followers','follower_id','following_id')->withPivot('status')->withTimestamps();
     }
     public function profile()
     {
         return $this->hasOne(Profile::class);
     }
-    public function follow($user)
+    public function follow($user, $options = [])
     {
-        return $this->following()->attach($user);
+        return $this->following()->attach($user, $options);
     }
     public function unfollow($user)
     {
@@ -76,5 +76,24 @@ class User extends Authenticatable implements JWTSubject
     public function shares()
     {
         return $this->hasMany(Share::class);
+    }
+
+    /**
+     * Check the follow status towards another user.
+     * Returns: 'none', 'pending', 'accepted', 'rejected'
+     */
+    public function getFollowStatus($targetUserId)
+    {
+        if ($this->id == $targetUserId) {
+            return 'none';
+        }
+        
+        $pivot = $this->following()->where('following_id', $targetUserId)->first();
+        
+        if ($pivot && $pivot->pivot) {
+             return $pivot->pivot->status;
+        }
+        
+        return 'none';
     }
 }

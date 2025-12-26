@@ -100,6 +100,11 @@ Route::group(['middleware' => ['api', 'auth:api']], function () {
     Route::post('unfollow', [ProfileController::class, 'unfollowUser']);
     Route::post('fetch_followers', [ProfileController::class, 'fetchFollower']);
     Route::post('fetch_following', [ProfileController::class, 'fetchFollowing']);
+    Route::post('fetch_requests', [ProfileController::class, 'fetchPendingRequests']);
+    Route::post('accept_request', [ProfileController::class, 'acceptFollowRequest']);
+    Route::post('reject_request', [ProfileController::class, 'rejectFollowRequest']);
+    Route::post('fetch_suggestions', [ProfileController::class, 'fetchSuggestions']);
+    Route::post('fetch_who_to_follow', [ProfileController::class, 'fetchWhoToFollow']);
 
     // User Routes
     Route::post('logout', [AuthController::class, 'logout']);

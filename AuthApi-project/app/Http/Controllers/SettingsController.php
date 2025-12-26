@@ -44,7 +44,7 @@ class SettingsController extends BaseController
         }
         
         if($user->hasRole('super admin') || $user->hasPermissionTo('manage access')){
-            $settings = Settings::get();
+            $settings = Settings::retrieve();
             $data = $request->except(['logo', 'favicon']);
 
             // Handle File Uploads

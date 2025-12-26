@@ -28,7 +28,7 @@ class Settings extends Model
     /**
      * Get the current settings or create default.
      */
-    public static function get()
+    public static function retrieve()
     {
         return self::firstOrCreate([], [
             'site_name' => 'Social Platform',
