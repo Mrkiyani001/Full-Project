@@ -659,11 +659,15 @@
             }
         }
 
-        // --- 3. POST CREATION LOGIC ---
+        // --- 3. POST CREATION & EDIT LOGIC ---
+        let isEditingPost = false;
+        let editingPostId = null;
+
         function initPostCreation() {
             const postImageInput = document.getElementById('post-image-input');
             const postFileInput = document.getElementById('post-file-input');
             const createBtn = document.getElementById('create-post-btn');
+            const contentInput = document.getElementById('create-post-content');
 
             // File Inputs
             if (postImageInput) postImageInput.addEventListener('change', handleFileSelect);
@@ -672,51 +676,79 @@
             // Create Button
             if (createBtn) {
                 createBtn.addEventListener('click', async () => {
-                    const contentInput = document.getElementById('create-post-content');
                     const originalPostIdInput = document.getElementById('original-post-id');
                     const imagePreviewContainer = document.getElementById('image-preview-container');
-                    const quotePreviewContainer = document.getElementById('quote-preview-container');
-
+                    
                     const content = contentInput.value;
                     const originalPostId = originalPostIdInput.value;
 
+                    // Validation
                     if (!content && selectedFiles.length === 0 && !originalPostId) {
                         showToast("Please write something!", "error");
                         return;
                     }
+
                     createBtn.disabled = true;
-                    createBtn.textContent = 'Posting...';
+                    createBtn.textContent = isEditingPost ? 'Updating...' : 'Posting...';
 
                     const formData = new FormData();
-                    formData.append('title', "New Post");
                     formData.append('body', content);
-                    if (originalPostId) formData.append('original_post_id', originalPostId);
-                    selectedFiles.forEach(file => formData.append('attachments[]', file));
+                    formData.append('title', "Post Update"); // Required by backend API
+                    
+                    if (isEditingPost) {
+                        // Update Mode
+                        formData.append('id', editingPostId);
+                        // Add files only if not restricted (though UI should prevent it)
+                         selectedFiles.forEach(file => formData.append('attachments[]', file));
+                    } else {
+                        // Create Mode
+                        if (originalPostId) formData.append('original_post_id', originalPostId);
+                        selectedFiles.forEach(file => formData.append('attachments[]', file));
+                    }
 
                     try {
-                        const response = await fetch(`${API_BASE_URL}/create_post`, {
+                        const endpoint = isEditingPost ? `${API_BASE_URL}/update_post` : `${API_BASE_URL}/create_post`;
+                        const response = await fetch(endpoint, {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${token}` },
                             body: formData
                         });
                         const data = await response.json();
+                        
                         if (data.success) {
+                            // Reset Form
                             contentInput.value = '';
                             window.cancelRetweet();
                             imagePreviewContainer.innerHTML = '';
                             imagePreviewContainer.classList.add('hidden');
                             selectedFiles = [];
-                            showToast(originalPostId ? 'Reposted successfully! 🔄' : 'Post created! It is under moderation.');
-                            loadPosts(); // Refresh feed immediately
+                            
+                            showToast(isEditingPost ? 'Post updated successfully! ✅' : (originalPostId ? 'Reposted successfully! 🔄' : 'Post created! It is under moderation.'));
+                            
+                            // Reset State
+                            isEditingPost = false;
+                            editingPostId = null;
+                            createBtn.innerHTML = `<span>Post</span><span class="material-symbols-outlined text-[14px] group-hover/submit:translate-x-1 transition-transform">send</span>`;
+                            createBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                            createBtn.classList.add('bg-gradient-to-r', 'from-primary', 'to-blue-600');
+                            
+                            // Force Reload
+                            localStorage.removeItem(window.postsCacheKey || 'home_posts_cache'); 
+                            // Try to update DOM directly if possible for instant feel, but clearing cache + loadPosts is safer for consistency
+                            const postsContainer = document.getElementById('posts-container');
+                            if(postsContainer) postsContainer.innerHTML = ''; // Visual clear
+                            loadPosts(); 
                         } else {
-                            showToast(data.message || 'Error creating post', 'error');
+                            showToast(data.message || 'Error processing post', 'error');
                         }
                     } catch (e) {
                         console.error(e);
-                        showToast('Error creating post', 'error');
+                        showToast('Error processing post', 'error');
                     } finally {
-                        createBtn.textContent = 'Post';
-                        createBtn.disabled = false;
+                        if (createBtn.textContent !== 'Post') { // If not reset by success
+                             createBtn.textContent = 'Post';
+                             createBtn.disabled = false;
+                        }
                     }
                 });
             }
@@ -724,6 +756,52 @@
             // Emoji Picker Logic
             initEmojiPicker();
         }
+
+        // Global Edit Trigger
+        window.triggerEditPost = function(post) {
+            isEditingPost = true;
+            editingPostId = post.id;
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Populate Content
+            const contentInput = document.getElementById('create-post-content');
+            contentInput.value = post.body || '';
+            contentInput.focus();
+            
+            // Handle Attachments & Locking
+            const hasInteractions = (post.like_count > 0 || post.comments_count > 0);
+            const imageInput = document.getElementById('post-image-input');
+            const fileInput = document.getElementById('post-file-input');
+            
+            if (hasInteractions) {
+                showToast('Attachments cannot be edited because this post has interactions.', 'warning');
+                if(imageInput) imageInput.disabled = true;
+                if(fileInput) fileInput.disabled = true;
+                
+                // Show existing attachments as locked preview?
+                // For simplified UX, we just don't load them into "selectedFiles" for editing if locked.
+                // Or we can warn user. 
+                // The user said: "agr reaction ya comments ho jya to atachment change ni ho gi just us ka caption change ho ga"
+                // So we basically ignore attachments in the Update call if locked, or just don't let them add new ones.
+            } else {
+                if(imageInput) imageInput.disabled = false;
+                if(fileInput) fileInput.disabled = false;
+                // Ideally we would fetch existing attachments and add to selectedFiles if we supported removing them.
+                // But for now, we just allow adding NEW ones if no interactions.
+                // To support "keeping existing", the backend update_post needs to handle "keep_attachments".
+                // Assuming standard override or append behavior.
+            }
+            
+            // Update UI Button
+            const createBtn = document.getElementById('create-post-btn');
+            if(createBtn) {
+                createBtn.innerHTML = `<span>Update</span><span class="material-symbols-outlined text-[14px]">save</span>`;
+                createBtn.classList.remove('bg-gradient-to-r', 'from-primary', 'to-blue-600');
+                createBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+            }
+        };
 
         function handleFileSelect(e) {
             const imagePreviewContainer = document.getElementById('image-preview-container');
@@ -878,7 +956,7 @@
             }
 
             try {
-                const response = await fetch(`${API_BASE_URL}/get_all_posts?limit=10`, {
+                const response = await fetch(`${API_BASE_URL}/get_all_posts?limit=100`, {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
                 });

@@ -9,12 +9,17 @@ class View extends Model
     protected $table = 'view';
     protected $fillable = [
         'post_id',
+        'reel_id',
         'created_by',
         'updated_by',
     ];
     public function post()
     {
         return $this->belongsTo(Post::class);
+    }
+    public function reel()
+    {
+        return $this->belongsTo(Reel::class);
     }
     public function creator()
     {

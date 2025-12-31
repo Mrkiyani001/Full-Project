@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('file_type')->nullable();
             $table->integer('duration')->nullable();
             $table->integer('views')->default(0);
-            $table->enum('privacy', ['public', 'private', 'unlisted'])->default('public');
+            $table->enum('privacy', ['public', 'private', 'followers'])->default('public');
             $table->integer('created_by')->nullable();
             $table->integer('updated_by')->nullable();
             $table->timestamps();

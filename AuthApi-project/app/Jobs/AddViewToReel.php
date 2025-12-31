@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Post;
+use App\Models\Reel;
 use App\Models\View;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -10,22 +11,20 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-class AddView implements ShouldQueue
+class AddViewToReel implements ShouldQueue
 {
     use Queueable, Dispatchable, InteractsWithQueue, SerializesModels;
     public $user_id;
-    public $post_id;
+    public $reel_id;
     /**
      * Create a new job instance.
      */
-    public function __construct($user_id, $post_id)
+    public function __construct($user_id, $reel_id)
     {
         $this->user_id = $user_id;
-        $this->post_id = $post_id;
+        $this->reel_id = $reel_id;
     }
 
     /**
@@ -36,13 +35,13 @@ class AddView implements ShouldQueue
         Log::info('AddView job started');
         try {
             $view = View::firstOrCreate([
-                'post_id' => $this->post_id,
+                'reel_id' => $this->reel_id,
                 'created_by' => $this->user_id,
             ], [
                 'updated_by' => $this->user_id,
             ]);
             if($view->wasRecentlyCreated){
-                Post::where('id', $this->post_id)->increment('score');
+                Reel::where('id', $this->reel_id)->increment('views');
             }
         } catch (Exception $e) {
             Log::error('AddView job failed: ' . $e->getMessage());

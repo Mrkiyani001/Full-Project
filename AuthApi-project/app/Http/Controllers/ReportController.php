@@ -6,6 +6,7 @@ use App\Models\CommentReply;
 use App\Models\Post;
 use App\Models\Report;
 use App\Models\Comments;
+use App\Models\Reel;
 use Exception;
 use Illuminate\Http\Request;
 
@@ -14,7 +15,7 @@ class ReportController extends BaseController
     public function createReport(Request $request)
     {
         $this->validateRequest($request, [
-            'reportable_type' => 'required|string|in:post,comment,reply', // Fixed validation syntax
+            'reportable_type' => 'required|string|in:post,comment,reply,reels', // Fixed validation syntax
             'reportable_id' => 'required|integer',
             'reason' => 'required|string|max:255',
         ]);
@@ -32,6 +33,9 @@ class ReportController extends BaseController
                     break;
                 case 'reply':
                     $modelcase = CommentReply::class;
+                    break;
+                case 'reels':
+                    $modelcase = Reel::class;
                     break;
             }
 

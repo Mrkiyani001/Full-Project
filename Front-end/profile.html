@@ -397,7 +397,37 @@
     <script>
 
         // Initialize state variables early
-        let currentTab = 'posts';
+        let currentTab = urlParams.get('tab') || 'posts';
+
+        // Update UI state for active tab immediately if possible, or do it after renderProfile?
+        // Ideally tab buttons are static in HTML (Lines 299-326). 
+        // We should add logic to update their styles on load.
+        document.addEventListener('DOMContentLoaded', () => {
+             const tabs = document.querySelectorAll('.tab-btn');
+             tabs.forEach(btn => {
+                 const t = btn.getAttribute('data-tab');
+                 if (t === currentTab) {
+                    btn.classList.add('text-primary', 'border-b-2', 'border-primary');
+                    btn.classList.remove('text-secondary-text');
+                 } else {
+                    btn.classList.remove('text-primary', 'border-b-2', 'border-primary');
+                    btn.classList.add('text-secondary-text');
+                 }
+                 
+                 btn.addEventListener('click', () => {
+                     currentTab = t;
+                     // Update UI
+                     tabs.forEach(b => {
+                        b.classList.remove('text-primary', 'border-b-2', 'border-primary');
+                        b.classList.add('text-secondary-text');
+                     });
+                     btn.classList.add('text-primary', 'border-b-2', 'border-primary');
+                     btn.classList.remove('text-secondary-text');
+                     
+                     loadTabContent(); // Reload content
+                 });
+             });
+        });
 
         // Global Fetch Interceptor for Token Expiration (401)
         const originalFetch = window.fetch;
@@ -717,15 +747,31 @@
                 const data = await response.json();
                 container.innerHTML = '';
 
-                if (data.success && data.data && data.data.items && data.data.items.length > 0) {
-                     let items = data.data.items;
+                let items = [];
+                if (data.success && data.data) {
+                    if (Array.isArray(data.data)) {
+                        items = data.data;
+                    } else if (data.data.items && Array.isArray(data.data.items)) {
+                        items = data.data.items;
+                    }
+                }
+
+                if (items.length > 0) {
                      
                      if (currentTab === 'saved') {
                         // REEL GRID
                         container.innerHTML = items.map(reel => {
                             let thumb = '';
                              if (reel.thumbnail_path) {
-                                thumb = reel.thumbnail_path.startsWith('http') ? reel.thumbnail_path : `${PUBLIC_URL}/${reel.thumbnail_path}`;
+                                if (reel.thumbnail_path.startsWith('http')) {
+                                    thumb = reel.thumbnail_path;
+                                } else {
+                                    // Ensure it doesn't already have /storage/
+                                    const cleanPath = reel.thumbnail_path.replace(/^\/?storage\//, '');
+                                    // Construct Base URL from API_BASE_URL (removing /api)
+                                    const baseUrl = API_BASE_URL.replace(/\/api\/?$/, '');
+                                    thumb = `${baseUrl}/storage/${cleanPath}`;
+                                }
                             }
                             return `
                                 <div class="aspect-[9/16] bg-black/50 rounded-xl overflow-hidden relative group cursor-pointer border border-white/5" onclick="window.location.href='reels.html?id=${reel.id}'">

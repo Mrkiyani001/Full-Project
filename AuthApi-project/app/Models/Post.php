@@ -72,4 +72,8 @@ class Post extends Model
     {
         return $this->belongsTo(Post::class, 'original_post_id');
     }
+    public function views()
+    {
+        return $this->hasMany(View::class);
+    }
 }

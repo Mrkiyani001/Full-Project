@@ -148,10 +148,12 @@ class CommentsController extends BaseController
                 $request->comment,
                 $uploadFiles
             );
+            $comment->refresh(); // Refresh from DB
             return response()->json([
                 'success' => true,
                 'message' => 'Comment updated successfully',
-                'data' => $uploadFiles,
+                'data' => $comment, // Return full comment object
+                'upload_files' => $uploadFiles // Keep this for legacy if needed
             ], 200);
         } catch (\Exception $e) {
             return response()->json([

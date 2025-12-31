@@ -172,6 +172,7 @@ Route::group(['middleware' => ['api', 'auth:api']], function () {
 
     // View Routes
     Route::post('add_view_to_post', [AddViewController::class, 'addView'])->middleware('permission:view posts');
+    Route::post('add_view_to_reel', [AddViewController::class, 'addViewToReel'])->middleware('permission:view posts');
 
     // Report Routes
     Route::post('report_content', [ReportController::class, 'createReport']);

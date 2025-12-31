@@ -12,7 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('comments', function (Blueprint $table) {
-            $table->unsignedBigInteger('reel_id')->nullable();
+           $table->unsignedBigInteger('reel_id')->nullable()->after('post_id');
+           $table->unsignedBigInteger('post_id')->nullable()->change();
         });
     }
 
@@ -23,6 +24,7 @@ return new class extends Migration
     {
         Schema::table('comments', function (Blueprint $table) {
             $table->dropColumn('reel_id');
+            $table->unsignedBigInteger('post_id')->nullable()->change();
         });
     }
 };

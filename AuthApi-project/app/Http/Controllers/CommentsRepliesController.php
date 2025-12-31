@@ -11,6 +11,7 @@ use App\Jobs\AddCommentReply;
 use App\Jobs\UpdateCommentReply;
 use App\Jobs\DeleteCommentReply;
 use App\Jobs\SendNotification;
+use Illuminate\Support\Facades\Log;
 
 class CommentsRepliesController extends BaseController
 {
@@ -37,14 +38,40 @@ class CommentsRepliesController extends BaseController
                 }
             }
 
-            AddCommentReply::dispatch(
-                $user->id,
-                $request->comment_id,
-                $request->reply,
-                $uploadFiles
-            );
+            // Direct synchronous creation for instant ID return
+            $commentReply = CommentReply::create([
+                'comment_id' => $request->comment_id,
+                'user_id' => $user->id,
+                'reply' => $request->reply,
+                'created_by' => $user->id,
+                'updated_by' => $user->id,
+            ]);
 
-            // Notification Logic: Notify Post Owner
+            // Handle Attachments
+            if (!empty($uploadFiles)) {
+                try {
+                    foreach ($uploadFiles as $filename) {
+                        $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                        $type = match (true) {
+                            in_array($extension, ['jpg', 'jpeg', 'png', 'gif']) => 'image',
+                            in_array($extension, ['mp4', 'avi', 'mov']) => 'video',
+                            $extension === 'pdf' => 'pdf',
+                            in_array($extension, ['doc', 'docx']) => 'word',
+                            in_array($extension, ['zip', 'rar', '7z']) => 'zip',
+                            default => 'other',
+                        };
+                        $commentReply->attachments()->create([
+                            'file_name' => $filename,
+                            'file_type' => $type,
+                            'file_path' => 'comment_replies/' . $filename,
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Failed to upload attachments for comment reply ID " . $commentReply->id . ": " . $e->getMessage());
+                }
+            }
+
+            // Notification Logic: Notify Post Owner (Async Job)
             $comment = Comments::find($request->comment_id);
             if ($comment) {
                 $post = Post::find($comment->post_id);
@@ -60,10 +87,15 @@ class CommentsRepliesController extends BaseController
                 }
             }
 
+            // Reload to get relationships if needed (e.g. avatar) or just return what we have
+            // We need to return structure matching what frontend expects if possible, 
+            // but for now ID is critical.
+            
             return response()->json([
                 'success' => true,
-                'message' => 'Comment Reply creation in progress',
-            ], 202);
+                'message' => 'Comment Reply created successfully',
+                'data' => $commentReply
+            ], 201);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

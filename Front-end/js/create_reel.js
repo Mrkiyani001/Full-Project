@@ -37,8 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (closePageBtn) {
         closePageBtn.addEventListener('click', () => {
-             if (state.videoFile && !confirm("Discard changes?")) return;
-             window.location.href = 'reels.html';
+            if (state.videoFile && !confirm("Discard changes?")) return;
+            window.location.href = 'reels.html';
         });
     }
 
@@ -46,8 +46,100 @@ document.addEventListener('DOMContentLoaded', () => {
     let state = {
         videoFile: null,
         thumbnailFile: null,
-        privacy: 'public' // Default
+        privacy: 'public', // Default
+        isEditing: false,
+        editId: null
     };
+
+    // --- Check for Edit Mode ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlEditId = urlParams.get('edit_id');
+    const editData = localStorage.getItem('edit_reel_data');
+    
+    // Priority: LocalStorage -> URL
+    if (editData || urlEditId) {
+        try {
+            let reel = null;
+            if(editData) {
+                reel = JSON.parse(editData);
+            } else if(urlEditId) {
+                // If only ID in URL, we need to fetch or trust.
+                // Since we can't sync fetch easily here without refactor, we assume basic edit mode 
+                // but we might miss pre-filled data if not in storage.
+                // However, user problem is STATE desync.
+                // If we have ID, we set checking true.
+                state.editId = urlEditId;
+                state.isEditing = true;
+                document.querySelector('h1').textContent = "Edit Reel";
+                postBtn.querySelector('#post-btn-text').textContent = "Update Reel";
+                // We might rely on backend to just update what we send? 
+                // But we need to pre-fill. 
+                // If URL used, we should fetch. 
+                // For now sticking to fixing strict check.
+            }
+
+            if(reel) {
+                state.isEditing = true;
+                state.editId = reel.id;
+                state.privacy = reel.privacy || 'public';
+
+
+            // UI Updates for Edit Mode
+            document.querySelector('h1').textContent = "Edit Reel";
+            document.title = "Edit Reel - NexUs";
+            captionInput.value = reel.caption || '';
+            updatePrivacyUI(); // Sync privacy buttons
+
+            // LOCK Video & Thumbnail ALWAYS for Edit Mode (User Request)
+            uploadState.innerHTML = `
+                <div class="h-16 w-16 rounded-full bg-white/5 flex items-center justify-center mb-4 border border-white/10">
+                    <span class="material-symbols-outlined text-3xl text-gray-500">lock</span>
+                </div>
+                <p class="text-gray-200 font-bold mb-1">Video Locked</p>
+                <p class="text-gray-500 text-xs text-center px-4">Video and thumbnail cannot be changed during update.</p>
+            `;
+            uploadState.style.pointerEvents = 'none';
+            changeVideoBtn.style.display = 'none';
+
+            const upThumbBtn = document.getElementById('upload-thumb-btn');
+            if (upThumbBtn) upThumbBtn.style.display = 'none';
+
+            const selFrameBtn = document.getElementById('select-frame-btn');
+            if (selFrameBtn) selFrameBtn.style.display = 'none';
+
+            // Show current thumbnail preview static
+            let thumb = reel.thumbnail_path;
+            if (thumb && !thumb.startsWith('http')) thumb = `${window.PUBLIC_URL}/storage/${thumb}`;
+            if (thumb) {
+                thumbnailImg.src = thumb;
+                thumbnailImg.classList.remove('hidden');
+            }
+
+            // Note: Video is not shown in preview to avoid loading larg files, or we can show it if URL is available.
+            // Let's show it if available but control inputs are hidden.
+            let vidUrl = reel.video_path;
+            if (vidUrl && !vidUrl.startsWith('http')) vidUrl = `${window.PUBLIC_URL}/storage/${vidUrl}`;
+
+            if (vidUrl) {
+                videoPreview.src = vidUrl;
+                videoPreview.classList.remove('hidden');
+                uploadState.classList.add('hidden');
+                // Hide Controls overlay that allows changing?
+                // Actually handleVideoSelect hides uploadState.
+                // Here we just show preview.
+            }
+
+
+            // Change Button Text
+            postBtn.querySelector('#post-btn-text').textContent = "Update Reel";
+            postBtn.querySelector('#post-btn-icon').textContent = "save";
+
+            
+            // Clear storage - REMOVING this to persist state on reload. 
+            // We will clear it on Success instead.
+            
+        } } catch (e) { console.error("Edit parse error", e); }
+    }
 
     // --- 1. Video Upload Logic ---
 
@@ -59,7 +151,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Trigger file input
-    uploadState.addEventListener('click', () => videoInput.click());
+    uploadState.addEventListener('click', () => {
+        if (!state.isEditing) videoInput.click(); // Disable click in edit mode if we want strict consistency
+    });
     changeVideoBtn.addEventListener('click', () => videoInput.click());
 
     videoInput.addEventListener('change', (e) => {
@@ -156,10 +250,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Option B: Select Frame
     selectFrameBtn.addEventListener('click', () => {
-        if (!state.videoFile) {
+        if (!state.videoFile && !state.isEditing) { // Allow if editing might have existing video? No, need file object for capture usually.
             alert("Please upload a video first.");
             return;
         }
+
+        // If editing and no new file, we can't capture easily from cross-origin video (CORS).
+        // Check if we have a file.
+        if (state.isEditing && !state.videoFile) {
+            alert("Cannot edit thumbnail of existing video. Please upload a new video to change thumbnail.");
+            return;
+        }
+
         // Pause video to make selection easier
         videoPreview.pause();
         playIcon.textContent = 'play_arrow';
@@ -240,64 +342,76 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 5. Submission ---
 
     postBtn.addEventListener('click', async () => {
-        if (!state.videoFile) {
+        // Robust Check: Trust UI if state failed
+        const btnText = postBtn.querySelector('#post-btn-text').textContent;
+        const isUpdateMode = state.isEditing || btnText.includes('Update');
+        
+        if (!state.videoFile && !isUpdateMode) {
             alert('Please select a video first.');
             return;
         }
 
         const formData = new FormData();
-        formData.append('video', state.videoFile);
+        // If editing, only append video if provided
+        if (state.videoFile) formData.append('video', state.videoFile);
+
         formData.append('caption', captionInput.value);
         formData.append('privacy', state.privacy);
 
+        // Ensure we send ID if update mode
+        if (isUpdateMode) {
+             formData.append('reel_id', state.editId || new URLSearchParams(window.location.search).get('edit_id'));
+        }
+
         if (state.thumbnailFile) {
             formData.append('thumbnail', state.thumbnailFile);
-        } else {
-             // Auto-generate validation
-             try {
+        } else if (!isUpdateMode) { // Auto-thumb only on create
+            // Auto-generate validation
+            try {
                 // Ensure video is ready
-                if(videoPreview.readyState >= 2) {
-                     const timeToCapture = Math.min(1.0, videoPreview.duration); // Capture at 1s or end
-                     videoPreview.currentTime = timeToCapture;
-                     
-                     // Wait for seek
-                     await new Promise(r => {
+                if (videoPreview.readyState >= 2) {
+                    const timeToCapture = Math.min(1.0, videoPreview.duration); // Capture at 1s or end
+                    videoPreview.currentTime = timeToCapture;
+
+                    // Wait for seek
+                    await new Promise(r => {
                         const onSeek = () => {
                             videoPreview.removeEventListener('seeked', onSeek);
                             r();
                         };
                         videoPreview.addEventListener('seeked', onSeek);
-                     });
+                    });
 
-                     // Capture
-                     canvas.width = videoPreview.videoWidth;
-                     canvas.height = videoPreview.videoHeight;
-                     const ctx = canvas.getContext('2d');
-                     ctx.drawImage(videoPreview, 0, 0, canvas.width, canvas.height);
-                     
-                     const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85));
-                     if(blob) {
+                    // Capture
+                    canvas.width = videoPreview.videoWidth;
+                    canvas.height = videoPreview.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(videoPreview, 0, 0, canvas.width, canvas.height);
+
+                    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85));
+                    if (blob) {
                         const file = new File([blob], "auto_thumb.jpg", { type: "image/jpeg" });
                         formData.append('thumbnail', file);
                         console.log("Auto-generated thumbnail attached");
-                     }
+                    }
                 }
-             } catch(e) {
-                 console.warn("Auto-thumbnail failed", e);
-             }
+            } catch (e) {
+                console.warn("Auto-thumbnail failed", e);
+            }
         }
 
         // UI Loading State
-        const originalText = postBtn.querySelector('#post-btn-text').textContent;
+        const originalText = btnText;
         const icon = postBtn.querySelector('#post-btn-icon');
 
         postBtn.disabled = true;
-        postBtn.querySelector('#post-btn-text').textContent = "Uploading...";
+        postBtn.querySelector('#post-btn-text').textContent = isUpdateMode ? "Updating..." : "Uploading...";
         icon.textContent = "progress_activity";
         icon.classList.add('animate-spin');
 
         try {
-            const response = await fetch(`${window.API_BASE_URL}/create_reel`, {
+            const endpoint = isUpdateMode ? '/update_reel' : '/create_reel';
+            const response = await fetch(`${window.API_BASE_URL}${endpoint}`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -309,6 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok && data.success) {
                 // Success
+                localStorage.removeItem('edit_reel_data'); // Clear edit state
                 window.location.href = 'reels.html?uploaded=true';
             } else {
                 throw new Error(data.message || 'Upload failed');
@@ -316,11 +431,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error(error);
-            alert('Upload Error: ' + error.message);
+            alert('Error: ' + error.message);
             // Reset Button
             postBtn.disabled = false;
             postBtn.querySelector('#post-btn-text').textContent = originalText;
-            icon.textContent = "send";
+            icon.textContent = state.isEditing ? "save" : "send";
             icon.classList.remove('animate-spin');
         }
     });

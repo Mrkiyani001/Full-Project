@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\AddReaction;
 use App\Jobs\AddReactionToComment;
+use App\Jobs\AddReelReaction;
 use App\Jobs\SendNotification;
 use App\Models\CommentReply;
 use App\Models\Comments;
@@ -242,7 +243,7 @@ class ReactionController extends BaseController
       if (!$user) {
         return $this->response(false, 'Unauthorized', 401);
       }
-      \App\Jobs\AddReelReaction::dispatch(
+      AddReelReaction::dispatch(
         (int) $user->id,
         (int) $request->reel_id,
         (int) $request->type,

@@ -479,10 +479,37 @@ function createPostHTML(post) {
                             <button class="text-slate-400 hover:text-white p-1 rounded-full hover:bg-white/5 transition-colors">
                                 <span class="material-symbols-outlined text-[20px]">more_horiz</span>
                             </button>
-                            <div class="absolute right-0 top-full mt-2 w-48 bg-[#1e2330] border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover/dropdown:opacity-100 group-hover/dropdown:visible transition-all z-20 overflow-hidden">
-                                <button onclick="openReportModal(${post.id}, 'post')" class="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-white/5 hover:text-red-300 flex items-center gap-3 transition-colors">
-                                    <span class="material-symbols-outlined text-[18px]">flag</span> Report Post
-                                </button>
+                            <div class="absolute right-0 top-full mt-2 w-48 bg-[#1e2330] border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover/dropdown:opacity-100 group-hover/dropdown:visible transition-all z-20 overflow-hidden text-left">
+                                ${(() => {
+                                    const currentId = (currentUserData && currentUserData.id) || (typeof userData !== 'undefined' && userData.id) || 0;
+                                    const currentRoles = (currentUserData && currentUserData.roles) ? currentUserData.roles.map(r => (typeof r === 'object' ? r.name : r).toLowerCase()) : [];
+                                    const isOwner = user.id === currentId;
+                                    const isAdmin = currentRoles.some(r => ['admin', 'super admin', 'superadmin', 'moderator'].includes(r));
+                                    
+                                    let items = '';
+                                    
+                                    if (isOwner) {
+                                        items += `
+                                        <button onclick="editPost(${post.id})" class="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+                                            <span class="material-symbols-outlined text-[18px]">edit</span> Edit Post
+                                        </button>`;
+                                    }
+                                    
+                                    if (isOwner || isAdmin) {
+                                        items += `
+                                        <button onclick="deletePost(${post.id})" class="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-white/5 hover:text-red-300 flex items-center gap-3 transition-colors border-t border-white/5">
+                                            <span class="material-symbols-outlined text-[18px]">delete</span> Delete Post
+                                        </button>`;
+                                    }
+                                    
+                                    if (!isOwner) {
+                                        items += `
+                                        <button onclick="openReportModal(${post.id}, 'post')" class="w-full text-left px-4 py-3 text-sm text-yellow-500 hover:bg-white/5 hover:text-yellow-400 flex items-center gap-3 transition-colors border-t border-white/5">
+                                            <span class="material-symbols-outlined text-[18px]">flag</span> Report Post
+                                        </button>`;
+                                    }
+                                    return items;
+                                })()}
                             </div>
                         </div>
                     </div>
@@ -679,12 +706,15 @@ async function toggleCommentSection(postId) {
                 const data = await response.json();
                 
                 if(data.success && data.data && data.data.items.length > 0) {
+                    const currentUser = JSON.parse(localStorage.getItem('user_data') || '{}');
+
                     list.innerHTML = data.data.items.map(comment => {
                         const user = comment.user || { name: 'Unknown', id: 0 };
                         const isLiked = comment.is_liked || false;
                         const likeCount = comment.like_count || 0;
                         const likeColorClass = isLiked ? 'text-pink-500' : 'text-secondary-text';
                         const likeFill = isLiked ? 1 : 0;
+                        const isOwner = currentUser.id === user.id;
 
                         // Render Replies
                         let repliesHTML = '';
@@ -696,17 +726,36 @@ async function toggleCommentSection(postId) {
                                 const replyLikeCount = reply.like_count || 0;
                                 const rLikeColor = replyIsLiked ? 'text-pink-500' : 'text-secondary-text';
                                 const rLikeFill = replyIsLiked ? 1 : 0;
+                                const isReplyOwner = currentUser.id === replyUser.id;
                                 
                                 return `
-                                <div class="flex gap-3 items-start animate-fade-in">
+                                <div class="flex gap-3 items-start animate-fade-in" id="post-comment-row-${reply.id}">
                                     ${renderAvatarHTML(replyUser, "w-6 h-6 rounded-full border border-white/10 cursor-pointer object-cover", `onclick="window.location.href='profile.html?id=${replyUser.id}'"`)}
                                     <div class="flex-1">
-                                        <div class="bg-white/5 rounded-xl p-2 px-3 border border-white/10">
+                                        <div class="bg-white/5 rounded-xl p-2 px-3 border border-white/10 group/reply relative">
                                             <div class="flex justify-between items-start mb-0.5">
                                                 <h4 class="font-bold text-white text-[11px] cursor-pointer hover:underline" onclick="window.location.href='profile.html?id=${replyUser.id}'">${replyUser.name}</h4>
-                                                <span class="text-[9px] text-slate-500">${timeAgo(reply.created_at)}</span>
+                                                
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-[9px] text-slate-500">${timeAgo(reply.created_at)}</span>
+                                                    ${isReplyOwner ? `
+                                                    <div class="relative group">
+                                                        <button onclick="togglePostCommentMenu(event, this)" class="text-slate-500 hover:text-white p-0.5 opacity-0 group-hover/reply:opacity-100 transition-opacity">
+                                                            <span class="material-symbols-outlined text-[14px]">more_horiz</span>
+                                                        </button>
+                                                        <div class="post-comment-menu absolute right-0 top-5 w-24 bg-[#1e2330] border border-white/10 rounded-lg shadow-xl py-1 z-20 opacity-0 scale-95 pointer-events-none transition-all duration-200 origin-top-right">
+                                                            <button onclick="editPostComment(${reply.id})" class="w-full text-left px-3 py-1.5 text-[10px] text-slate-300 hover:bg-white/10 hover:text-white flex items-center gap-1.5">
+                                                                <span class="material-symbols-outlined text-[12px]">edit</span> Edit
+                                                            </button>
+                                                            <button onclick="deletePostComment(${reply.id}, this)" class="w-full text-left px-3 py-1.5 text-[10px] text-red-400 hover:bg-white/10 flex items-center gap-1.5">
+                                                                <span class="material-symbols-outlined text-[12px]">delete</span> Delete
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    ` : ''}
+                                                </div>
                                             </div>
-                                            <p class="text-slate-300 text-xs whitespace-pre-wrap">${reply.reply}</p>
+                                            <p class="text-slate-300 text-xs whitespace-pre-wrap comment-text break-words">${reply.reply}</p>
                                         </div>
                                         <div class="flex items-center gap-3 mt-1 ml-2">
                                             <button onclick="likeReply(${reply.id}, this)" class="flex items-center gap-1 text-[10px] font-medium ${rLikeColor} hover:text-pink-500 transition-colors">
@@ -726,45 +775,71 @@ async function toggleCommentSection(postId) {
                         }
 
                         return `
-                        <div class="flex gap-3 items-start animate-fade-in group/comment">
-                            ${renderAvatarHTML(user, "w-8 h-8 rounded-full border border-white/10 cursor-pointer object-cover", `onclick="window.location.href='profile.html?id=${user.id}'"`)}
-                            <div class="flex-1">
-                                <div class="bg-white/5 rounded-xl p-3 border border-white/10">
-                                    <div class="flex justify-between items-start mb-1">
-                                        <h4 class="font-bold text-white text-xs cursor-pointer hover:underline" onclick="window.location.href='profile.html?id=${user.id}'">${user.name}</h4>
-                                        <span class="text-[10px] text-slate-500">${timeAgo(comment.created_at)}</span>
+                             <div class="flex gap-3 items-start animate-fade-in group/comment" id="post-comment-row-${comment.id}">
+                                ${renderAvatarHTML(user, "w-8 h-8 rounded-full border border-white/10 cursor-pointer object-cover", `onclick="window.location.href='profile.html?id=${user.id}'"`)}
+                                <div class="flex-1">
+                                    <div class="bg-white/5 rounded-2xl p-3 border border-white/10 relative">
+                                        <div class="flex justify-between items-start mb-1">
+                                            <div class="flex flex-col">
+                                                <h4 class="font-bold text-white text-sm cursor-pointer hover:text-blue-400 transition-colors" onclick="window.location.href='profile.html?id=${user.id}'">${user.name}</h4>
+                                                <span class="text-[10px] text-secondary-text">${timeAgo(comment.created_at)}</span>
+                                            </div>
+                                            
+                                            ${isOwner ? `
+                                            <div class="relative group">
+                                                <button onclick="togglePostCommentMenu(event, this)" class="text-slate-500 hover:text-white p-1 opacity-0 group-hover/comment:opacity-100 transition-opacity">
+                                                    <span class="material-symbols-outlined text-[16px]">more_horiz</span>
+                                                </button>
+                                                <!-- Dropdown -->
+                                                <div class="post-comment-menu absolute right-0 top-6 w-32 bg-[#1e2330] border border-white/10 rounded-lg shadow-xl py-1 z-20 opacity-0 scale-95 pointer-events-none transition-all duration-200 origin-top-right">
+                                                    <button onclick="editPostComment(${comment.id})" class="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-white/10 hover:text-white flex items-center gap-2">
+                                                        <span class="material-symbols-outlined text-[14px]">edit</span> Edit
+                                                    </button>
+                                                    <button onclick="deletePostComment(${comment.id}, this)" class="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-white/10 flex items-center gap-2">
+                                                        <span class="material-symbols-outlined text-[14px]">delete</span> Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            ` : ''}
+                                        </div>
+                                        <p class="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap comment-text break-words">${comment.comment}</p>
                                     </div>
-                                    <p class="text-slate-300 text-sm whitespace-pre-wrap">${comment.comment}</p>
-                                </div>
-                                
-                                <div class="flex items-center gap-4 mt-1 ml-2">
-                                    <button onclick="likeComment(${comment.id}, this)" class="flex items-center gap-1 text-xs font-medium ${likeColorClass} hover:text-pink-500 transition-colors">
-                                        <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' ${likeFill}">favorite</span>
-                                        <span onclick="openUserListModal(${comment.id}, 'comment')" class="cursor-pointer hover:text-white">${likeCount > 0 ? likeCount : 'Like'}</span>
-                                    </button>
-                                    <button onclick="toggleReplyInput(${comment.id})" class="flex items-center gap-1 text-xs font-medium text-secondary-text hover:text-white transition-colors">
-                                        <span class="material-symbols-outlined text-[16px]">reply</span>
-                                        <span>Reply</span>
-                                    </button>
-                                </div>
+                                    <div class="flex items-center gap-4 mt-1.5 ml-2">
+                                        <button onclick="likeComment(${comment.id}, this)" class="flex items-center gap-1.5 text-xs font-medium ${likeColorClass} hover:text-pink-500 transition-colors group">
+                                            <span class="material-symbols-outlined text-[16px] group-hover:scale-110 transition-transform" style="font-variation-settings: 'FILL' ${likeFill}">favorite</span>
+                                            <span class="group-hover:text-white">${likeCount > 0 ? likeCount : 'Like'}</span>
+                                        </button>
+                                        <button onclick="toggleReplyInput(${comment.id})" class="flex items-center gap-1.5 text-xs font-medium text-secondary-text hover:text-blue-400 transition-colors">
+                                            <span class="material-symbols-outlined text-[16px]">chat_bubble</span>
+                                            <span>Reply</span>
+                                        </button>
+                                    </div>
 
-                                ${repliesHTML}
+                                    <!-- Reply Input -->
+                                    <div id="reply-box-${comment.id}" class="hidden mt-3 ml-2 flex gap-2 items-center animate-fade-in-up">
+                                         <!-- Avatar or just input? -->
+                                         <button class="shrink-0">
+                                            ${renderAvatarHTML(currentUserData || userData, "w-6 h-6 rounded-full border border-white/10 object-cover")}
+                                         </button>
+                                         <div class="flex-1 relative">
+                                            <textarea id="reply-input-${comment.id}" 
+                                                class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all resize-none overflow-hidden"
+                                                rows="1"
+                                                placeholder="Write a reply..."
+                                                oninput="this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'"></textarea>
+                                            <button onclick="submitReply(${comment.id})" class="absolute right-2 bottom-1.5 p-1 rounded-lg text-blue-400 hover:bg-blue-600/20 hover:text-white transition-all">
+                                                <span class="material-symbols-outlined text-[16px]">send</span>
+                                            </button>
+                                         </div>
+                                    </div>
 
-                                <div id="reply-box-${comment.id}" class="hidden mt-2 flex gap-2 items-start ml-2">
-                                        ${renderAvatarHTML(currentUserData || userData, "w-6 h-6 rounded-full border border-white/10 mt-1 object-cover")}
-                                        <div class="flex-1">
-                                        <textarea id="reply-input-${comment.id}" class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-slate-300 focus:outline-none focus:border-primary/50 transition-all resize-none h-16 placeholder:text-slate-500" placeholder="Write a reply..."></textarea>
-                                        <div class="flex justify-end mt-1">
-                                                <button onclick="submitReply(${comment.id})" class="px-3 py-1 bg-primary text-white text-[10px] font-bold rounded-md hover:bg-blue-600 transition-colors">Reply</button>
-                                        </div>
-                                        </div>
+                                    ${repliesHTML}
                                 </div>
                             </div>
-                        </div>
                         `;
                     }).join('');
                 } else {
-                    list.innerHTML = '<div class="text-xs text-secondary-text text-center py-2">No comments yet.</div>';
+                    list.innerHTML = '<div class="text-xs text-secondary-text text-center py-4">No comments yet. Be the first to say something!</div>';
                 }
             } catch(e) {
                 console.error(e);
@@ -1171,3 +1246,253 @@ async function sharePost(postId) {
         }
     }
 }
+
+// Post Actions: Edit & Delete
+
+async function deletePost(postId) {
+    if(!confirm("Are you sure you want to delete this post? This cannot be undone.")) return;
+    
+    // Optimistic UI: Remove from DOM immediately
+    let removed = false;
+    
+    // Find the closest article or post container
+    // Strategy: Look for the delete button that called this, but since we don't have 'this' reference passed efficiently in all calls (some are onclick="deletePost(id)"), 
+    // we search for the specific post element by ID or internal attribute if possible.
+    // Or we find ANY element related to this post ID.
+    // best way: add id="post-${postId}" to article? createPostHTML doesn't seem to add it yet.
+    // Fallback: search by content or unique button attribute.
+    
+    // Try to find the delete button for this post, or use a more robust selector if we added ID.
+    // Currently createPostHTML produces: <article ...> ... deletePost(${post.id}) ... </article>
+    // We can iterate articles or use XPath, but simpler is to assume we can find the button.
+    const allDeleteBtns = Array.from(document.querySelectorAll(`button[onclick*="deletePost(${postId})"]`));
+    allDeleteBtns.forEach(btn => {
+         const article = btn.closest('article');
+         if(article) {
+             article.style.transition = "opacity 0.3s, transform 0.3s";
+             article.style.opacity = "0";
+             article.style.transform = "scale(0.95)";
+             setTimeout(() => article.remove(), 300); // Remove after animation
+             removed = true;
+         }
+    });
+
+    try {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/delete_post`, {
+            method: 'DELETE',
+            headers: { 
+                'Authorization': `Bearer ${token}`, 
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify({ id: postId })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Post deleted successfully', 'success');
+             // Also update cache if possible so reload doesn't bring it back
+             try {
+                 const cached = localStorage.getItem('home_posts_cache');
+                 if(cached) {
+                     let parsed = JSON.parse(cached);
+                     // Helper to filter recursive
+                     if(Array.isArray(parsed)) {
+                         parsed = parsed.filter(p => p.id !== postId);
+                     } else if (parsed.data && Array.isArray(parsed.data)) {
+                         parsed.data = parsed.data.filter(p => p.id !== postId);
+                     } else if (parsed.items && Array.isArray(parsed.items)) { // pagination wrapper
+                         parsed.items = parsed.items.filter(p => p.id !== postId);
+                     } else if (parsed.data && parsed.data.items && Array.isArray(parsed.data.items)) {
+                         parsed.data.items = parsed.data.items.filter(p => p.id !== postId);
+                     }
+                     localStorage.setItem('home_posts_cache', JSON.stringify(parsed));
+                 }
+             } catch(e) { console.warn("Cache update failed", e); }
+
+            if (!removed) {
+                 // Only reload if we couldn't find/remove it visally
+                 setTimeout(() => window.location.reload(), 1000); 
+            }
+        } else {
+            showToast(data.message || 'Failed to delete post', 'error');
+            // Restore if failed? (Rare, but good UX would be to unhide)
+            if(removed) window.location.reload(); // Simplest fallback
+        }
+    } catch (e) {
+        console.error(e);
+        showToast('Error deleting post', 'error');
+        if(removed) window.location.reload();
+    }
+}
+
+async function editPost(postId) {
+    // Try to find post in local cache first
+    let post = null;
+    const cached = localStorage.getItem('home_posts_cache');
+    if (cached) {
+        try {
+            const parsed = JSON.parse(cached);
+            const items = Array.isArray(parsed) ? parsed : (parsed.items ? parsed.items : (parsed.data ? parsed.data : []));
+            post = items.find(p => p.id === postId);
+        } catch (e) { console.error("Cache parse error", e); }
+    }
+
+    // If not in cache, fallback to simple prompt (or fetch individual post - simpler to prompt for now if completely missing, but likely in cache if clicked)
+    if (post && typeof window.triggerEditPost === 'function') {
+        window.triggerEditPost(post);
+    } else {
+        // Fallback for pages where triggerEditPost might not be available (e.g. profile page?)
+        // If we are on profile page, we might not have triggerEditPost or the Create Post form.
+        // CHECK: Does profile.html have Create Post form? Usually no.
+        // User said: "agr post edit kr rha to wo upr jaga post create krta ha waha chla aya".
+        // This implies if I am on Profile, I should probably redirect to Home?
+        // Or if Profile has a create form.
+        // Let's assume Home for now. If on profile, maybe redirect to home?
+        if (window.location.pathname.includes('homefeed') || document.getElementById('create-post-content')) {
+             if(post) window.triggerEditPost(post);
+        } else {
+             // Fallback to prompt if not on dashboard
+             const newBody = prompt("Edit your post caption:", post ? post.body : "");
+             if (newBody === null) return;
+             
+             try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch(`${API_BASE_URL}/update_post`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${token}`, 
+                        'Content-Type': 'application/json' 
+                    },
+                    body: JSON.stringify({ id: postId, body: newBody })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Post updated successfully', 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    showToast(data.message || 'Failed to update post', 'error');
+                }
+             } catch(e) { console.error(e); }
+        }
+    }
+}
+
+// --- Post Comment Actions ---
+window.togglePostCommentMenu = function(e, btn) {
+    if(e) e.stopPropagation();
+    const menu = btn.nextElementSibling;
+    
+    // Close others
+    document.querySelectorAll('.post-comment-menu.active').forEach(el => {
+        if(el !== menu) el.classList.remove('active', 'scale-100', 'opacity-100');
+    });
+    
+    if (menu.classList.contains('active')) {
+        menu.classList.remove('active', 'scale-100', 'opacity-100');
+        menu.classList.add('scale-95', 'opacity-0', 'pointer-events-none');
+    } else {
+        menu.classList.add('active', 'scale-100', 'opacity-100', 'pointer-events-auto');
+        menu.classList.remove('scale-95', 'opacity-0', 'pointer-events-none');
+    }
+};
+
+window.deletePostComment = async function(commentId, btn) {
+    if(!confirm("Delete this comment?")) return;
+    
+    const commentRow = document.getElementById(`post-comment-row-${commentId}`);
+    
+    // Optimistic Remove
+    if(commentRow) {
+        commentRow.style.transition = 'all 0.3s ease';
+        commentRow.style.opacity = '0';
+        setTimeout(() => commentRow.remove(), 300);
+    }
+    
+    try {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/delete_comment`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: commentId })
+        });
+        const data = await response.json();
+        if(!data.success) {
+            alert(data.message || 'Delete failed');
+        } 
+    } catch(e) { console.error(e); }
+};
+
+window.editPostComment = function(commentId) {
+    const commentRow = document.getElementById(`post-comment-row-${commentId}`);
+    const textP = commentRow.querySelector('.comment-text'); 
+    const originalText = textP.textContent;
+    
+    textP.classList.add('hidden');
+    
+    const editContainer = document.createElement('div');
+    editContainer.className = 'edit-container mt-2';
+    editContainer.innerHTML = `
+        <input type="text" class="w-full bg-[#151921] text-white text-xs rounded-lg px-3 py-2 border border-white/10 focus:border-blue-500 outline-none" value="${originalText.replace(/"/g, '&quot;')}">
+        <div class="flex justify-end gap-2 mt-2">
+            <button onclick="cancelPostCommentEdit(${commentId}, '${originalText.replace(/'/g, "\\'")}')" class="text-[10px] text-slate-400 hover:text-white px-2 py-1">Cancel</button>
+            <button onclick="savePostCommentEdit(${commentId})" class="text-[10px] bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded-md font-bold">Save</button>
+        </div>
+    `;
+    
+    // Insert after p parent div (the bg-white/5 box)
+    // Actually the comment-text is often inside the bubble.
+    // textP.parentNode is the bubble div.
+    textP.parentNode.insertBefore(editContainer, textP.nextSibling);
+    
+     // Hide Menu
+    const menu = commentRow.querySelector('.post-comment-menu');
+    if(menu) menu.classList.remove('active', 'scale-100', 'opacity-100');
+};
+
+window.cancelPostCommentEdit = function(commentId, originalText) {
+    const commentRow = document.getElementById(`post-comment-row-${commentId}`);
+    const textP = commentRow.querySelector('.comment-text');
+    const editContainer = commentRow.querySelector('.edit-container');
+    
+    if(editContainer) editContainer.remove();
+    textP.textContent = originalText;
+    textP.classList.remove('hidden');
+};
+
+window.savePostCommentEdit = async function(commentId) {
+    const commentRow = document.getElementById(`post-comment-row-${commentId}`);
+    const editContainer = commentRow.querySelector('.edit-container');
+    const input = editContainer.querySelector('input');
+    const newText = input.value.trim();
+    
+    if(!newText) return;
+    
+    const textP = commentRow.querySelector('.comment-text');
+    textP.textContent = newText;
+    textP.classList.remove('hidden');
+    editContainer.remove();
+    
+    try {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/update_comment`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: commentId, comment: newText })
+        });
+        const data = await response.json();
+         if(!data.success) {
+            alert('Update failed: ' + data.message);
+        }
+    } catch(e) { console.error(e); }
+};
+
+// Global click closer for post menus
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.group.relative')) {
+        document.querySelectorAll('.post-comment-menu.active').forEach(el => {
+            el.classList.remove('active', 'scale-100', 'opacity-100');
+            el.classList.add('scale-95', 'opacity-0', 'pointer-events-none');
+        });
+    }
+});

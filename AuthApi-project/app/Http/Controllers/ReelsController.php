@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\AddReel;
+use App\Models\Reaction;
 use App\Models\Reel;
 use App\Models\Share;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -29,7 +31,8 @@ class ReelsController extends BaseController
                 if ($request->hasFile('thumbnail')) {
                     $file = $request->file('thumbnail');
                     $filename = time() . '_thumb_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                    $thumbnailPath = $file->storeAs('reels', $filename, 'public');
+                    $file->move(public_path('thumbnails'), $filename);
+                    $thumbnailPath = 'thumbnails/' . $filename;
                 }
             } catch (\Exception $e) {
                 Log::error('Thumbnail Upload Error: ' . $e->getMessage());
@@ -185,6 +188,8 @@ class ReelsController extends BaseController
                 ->where('user_id', $request->user_id)
                 ->latest()
                 ->get();
+            
+            $reels = $this->enrichReels($reels, $user->id);
             return response()->json([
                 'success' => true,
                 'message' => 'Reels fetched successfully',
@@ -206,7 +211,11 @@ class ReelsController extends BaseController
                 return $this->unauthorized();
             }
             // For You: Random order to discover new content
-            $reels = Reel::with('user.profile.avatar')->inRandomOrder()->get();
+            $reels = Reel::with('user.profile.avatar')
+                ->withCount(['comments', 'reactions'])
+                ->inRandomOrder()
+                ->get();
+            $reels = $this->enrichReels($reels, $user->id);
             return response()->json([
                 'success' => true,
                 'message' => 'Reels fetched successfully',
@@ -234,9 +243,12 @@ class ReelsController extends BaseController
 
             // Fetch reels from these users, latest first
             $reels = Reel::with('user.profile.avatar')
+                ->withCount(['comments', 'reactions'])
                 ->whereIn('user_id', $followingIds)
                 ->latest()
                 ->get();
+
+            $reels = $this->enrichReels($reels, $user->id);
 
             return response()->json([
                 'success' => true,
@@ -281,17 +293,66 @@ class ReelsController extends BaseController
             if (!$user){
                 return $this->unauthorized();
             }
-            $limit = $request->input('limit', 10);
             $savedReels = $user->savedReels()
                 ->with('user.profile.user_avatar') // Eager load relationships
+                ->withCount(['comments', 'reactions'])
                 ->orderBy('pivot_created_at', 'desc')
-                ->paginate($limit);
+                ->get(); 
 
-            $data = $this->paginateData($savedReels, $savedReels->items());
+            $savedReels = $this->enrichReels($savedReels, $user->id);
 
-            return $this->Response(true, 'Saved reels retrieved', $data);
+            return response()->json([
+                'success' => true,
+                'message' => 'Saved reels fetched successfully',
+                'data' => $savedReels,
+            ], 200);
         } catch (\Exception $e) {
             return $this->Response(false, $e->getMessage(), null, 500);
         }
+    }
+
+    private function enrichReels($reels, $userId)
+    {
+        if ($reels->isEmpty()) return $reels;
+        
+        $reelIds = $reels->pluck('id');
+        $userIds = $reels->pluck('user_id')->unique();
+
+        // 1. Likes
+        $likes = Reaction::where('reactionable_type', Reel::class)
+            ->whereIn('reactionable_id', $reelIds)
+            ->where('created_by', $userId)
+            ->where('type', 1)
+            ->pluck('reactionable_id')
+            ->flip()
+            ->all();
+
+        // 2. Saved
+        $saved = DB::table('saved_reels')
+            ->whereIn('reel_id', $reelIds)
+            ->where('user_id', $userId)
+            ->pluck('reel_id')
+            ->flip()
+            ->all();
+
+        // 3. Follow Status
+        $follows = DB::table('followers')
+             ->where('follower_id', $userId)
+             ->whereIn('following_id', $userIds)
+             ->pluck('status', 'following_id')
+             ->all();
+
+        foreach ($reels as $reel) {
+            $reel->is_liked = isset($likes[$reel->id]);
+            $reel->is_saved = isset($saved[$reel->id]);
+            if ($reel->user) {
+                $reel->user->follow_status = $follows[$reel->user_id] ?? 'none';
+            }
+            // Map reactions_count to likes_count for frontend compatibility
+            $reel->likes_count = $reel->reactions_count ?? 0;
+            // Map comments_count for consistency (already available but ensures safe fallback)
+            $reel->comments_count = $reel->comments_count ?? 0;
+        }
+        return $reels;
     }
 }

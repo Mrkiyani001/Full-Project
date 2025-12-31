@@ -11,10 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('shares', function (Blueprint $table) {
+        Schema::table('view', function (Blueprint $table) {
             $table->unsignedBigInteger('reel_id')->nullable()->after('post_id');
             $table->unsignedBigInteger('post_id')->nullable()->change();
-            $table->foreign('reel_id')->references('id')->on('reels')->onDelete('cascade');
         });
     }
 
@@ -23,8 +22,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('shares', function (Blueprint $table) {
-            $table->dropForeign(['reel_id']);
+        Schema::table('view', function (Blueprint $table) {
             $table->dropColumn('reel_id');
             $table->unsignedBigInteger('post_id')->nullable()->change();
         });

@@ -12,7 +12,8 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
         rel="stylesheet" />
-    <link rel="icon" href="https://ui-avatars.com/api/?name=NexUs&background=2563eb&color=fff&rounded=true&bold=true" type="image/png">
+    <link rel="icon" href="https://ui-avatars.com/api/?name=NexUs&background=2563eb&color=fff&rounded=true&bold=true"
+        type="image/png">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script id="tailwind-config">
         tailwind.config = {
@@ -116,7 +117,7 @@
                             <span class="text-sm font-medium">Messages</span>
                         </a>
                         <a class="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#1c1f27] transition-colors"
-                            href="#">
+                            href="profile.html?tab=saved" id="sidebar-saved">
                             <span class="material-symbols-outlined">bookmark</span>
                             <span class="text-sm font-medium">Saved</span>
                         </a>
@@ -133,19 +134,17 @@
                         <span class="material-symbols-outlined text-[20px]">add_circle</span>
                         <a href="create-reel.html"><span>Create Reel</span></a>
                     </button>
-                    <div
-                        class="flex items-center gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-800 dark:bg-[#1c1f27]">
-                        <div class="h-10 w-10 overflow-hidden rounded-full bg-slate-200">
+                    <div onclick="window.location.href='profile.html'"
+                        class="flex items-center gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-800 dark:bg-[#1c1f27] cursor-pointer hover:bg-slate-100 dark:hover:bg-[#252932] transition-colors group">
+                        <div
+                            class="h-10 w-10 overflow-hidden rounded-full bg-slate-200 ring-2 ring-transparent group-hover:ring-primary transition-all">
                             <img alt="User Profile Picture" class="h-full w-full object-cover"
-                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCzTUAdzunKgIZpdtmL0B4Dv5QatWGOQP5H_z47SPvtO8krFaBfpE-0D5M3r2UZskE_NBsQ3fiQTbMo44ayrLv4a5W6169GQ7oiV8ZMXj0XbAm-Ii-xmW6wjDk2arOdCTkbYPAB8cXObHVWGW3ebeK5m1czZUldOwo2qTqfheUGgyrYYvyJuf84kzz5qsmlICkH_2nyMe9Xw6wKxhrVkvjPfy00MXL7ohQPugHS16J7rO1nohdPKPKHeLBOqcEdNRuOgEygJt_hBqY" />
+                                src="https://ui-avatars.com/api/?name=User&background=random" />
                         </div>
                         <div class="flex flex-col overflow-hidden">
-                            <p class="truncate text-sm font-bold text-slate-900 dark:text-white">Alex Morgan</p>
-                            <p class="truncate text-xs text-slate-500 dark:text-slate-400">@alexm</p>
+                            <p class="truncate text-sm font-bold text-slate-900 dark:text-white">User Name</p>
+                            <p class="truncate text-xs text-slate-500 dark:text-slate-400">@username</p>
                         </div>
-                        <button class="ml-auto text-slate-400 hover:text-slate-600 dark:hover:text-white">
-                            <span class="material-symbols-outlined">more_horiz</span>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -177,10 +176,6 @@
             <div class="flex-1 flex justify-center h-full overflow-hidden relative">
                 <div id="reels-container"
                     class="flex w-full max-w-[500px] flex-col items-center gap-0 pt-4 pb-20 overflow-y-auto scroll-smooth snap-y snap-mandatory no-scrollbar h-full">
-                    <!-- Loading Spinner -->
-                    <div class="h-full w-full flex items-center justify-center">
-                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                    </div>
                 </div>
             </div>
         </main>
@@ -194,16 +189,13 @@
                 </div>
                 <div class="flex flex-col gap-4" id="reels-suggestions-list">
                     <!-- Dynamic suggestions will be injected here -->
-                    <div class="text-center text-xs text-slate-500 py-4">Loading suggestions...</div>
                 </div>
             </div>
             <footer class="flex flex-wrap gap-x-4 gap-y-2 px-2 text-xs text-slate-500 dark:text-slate-500">
-                <a class="hover:underline" href="#">Terms</a>
-                <a class="hover:underline" href="#">Privacy</a>
-                <a class="hover:underline" href="#">Guidelines</a>
-                <a class="hover:underline" href="#">Ad Choices</a>
-                <a class="hover:underline" href="#">More</a>
-                <span>© 2024 NexUs</span>
+                <a class="hover:underline" href="terms.html">Terms</a>
+                <a class="hover:underline" href="privacy.html">Privacy</a>
+                <br>
+                <a href="#"><span>© 2025 NexUs</span></a>
             </footer>
         </div>
     </div>
@@ -257,13 +249,16 @@
 
 
     <!-- Comments Drawer -->
-    <div id="comments-backdrop" onclick="closeComments()" class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity duration-300 opacity-0 backdrop-blur-sm"></div>
-    <div id="comments-drawer" class="fixed inset-x-0 bottom-0 z-50 transform translate-y-full transition-transform duration-300 ease-out bg-[#1e2330] rounded-t-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.5)] h-[70vh] flex flex-col border-t border-white/10 max-w-lg mx-auto">
+    <div id="comments-backdrop" onclick="closeComments()"
+        class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity duration-300 opacity-0 backdrop-blur-sm"></div>
+    <div id="comments-drawer"
+        class="fixed inset-x-0 bottom-0 z-50 transform translate-y-full transition-transform duration-300 ease-out bg-[#1e2330] rounded-t-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.5)] h-[70vh] flex flex-col border-t border-white/10 max-w-lg mx-auto">
         <!-- Header -->
         <div class="flex items-center justify-center p-4 border-b border-white/5 relative">
             <div class="w-12 h-1 bg-white/20 rounded-full absolute top-2"></div>
             <h3 class="text-white font-bold text-sm mt-2">Comments</h3>
-            <button onclick="closeComments()" class="absolute right-4 top-4 text-slate-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors">
+            <button onclick="closeComments()"
+                class="absolute right-4 top-4 text-slate-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
@@ -275,23 +270,60 @@
         <div class="p-4 border-t border-white/10 bg-[#151921] pb-8 md:pb-4">
             <div class="flex gap-3 items-center">
                 <div class="h-8 w-8 rounded-full bg-slate-700 overflow-hidden shrink-0">
-                    <img id="comment-user-avatar" class="h-full w-full object-cover opacity-50" src="https://ui-avatars.com/api/?name=User&background=random">
+                    <img id="comment-user-avatar" class="h-full w-full object-cover opacity-50"
+                        src="https://ui-avatars.com/api/?name=User&background=random">
                 </div>
                 <div class="flex-1 relative" id="comment-form-container">
-                    <div id="reply-indicator" class="hidden absolute -top-8 left-0 text-xs text-blue-400 bg-[#1e2330] px-2 py-1 rounded-t-lg border-t border-x border-white/10 flex items-center gap-2">
+                    <div id="reply-indicator"
+                        class="hidden absolute -top-8 left-0 text-xs text-blue-400 bg-[#1e2330] px-2 py-1 rounded-t-lg border-t border-x border-white/10 flex items-center gap-2">
                         <span id="replying-to-text">Replying...</span>
                         <button id="cancel-reply-btn" class="text-slate-400 hover:text-white">
                             <span class="material-symbols-outlined text-[14px]">close</span>
                         </button>
                     </div>
-                    <input type="text" id="comment-input" class="w-full bg-white/5 border border-white/10 rounded-full pl-4 pr-10 py-2.5 text-sm text-white focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-all placeholder:text-slate-500" placeholder="Add a comment...">
-                    <button id="send-comment-btn" class="absolute right-1 top-1 p-1.5 text-primary hover:text-white hover:bg-primary rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    <input type="text" id="comment-input"
+                        class="w-full bg-white/5 border border-white/10 rounded-full pl-4 pr-10 py-2.5 text-sm text-white focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-all placeholder:text-slate-500"
+                        placeholder="Add a comment...">
+                    <button id="send-comment-btn"
+                        class="absolute right-1 top-1 p-1.5 text-primary hover:text-white hover:bg-primary rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                         <span class="material-symbols-outlined text-[20px] filled-icon">send</span>
                     </button>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Report Modal -->
+    <div id="report-modal" class="fixed inset-0 z-[60] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onclick="closeReportModal()"></div>
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div class="relative transform overflow-hidden rounded-2xl bg-[#1e2330] text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg border border-white/10">
+                <div class="px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <span class="material-symbols-outlined text-red-600">report</span>
+                        </div>
+                        <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
+                            <h3 class="text-base font-semibold leading-6 text-white" id="modal-title">Report Content</h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-300">Help us understand the problem. What's going on with this content?</p>
+                                <input type="hidden" id="report-target-id">
+                                <input type="hidden" id="report-target-type">
+                                <textarea id="report-reason-input" rows="4" class="mt-4 w-full rounded-xl bg-black/20 border border-white/10 p-3 text-white text-sm focus:border-red-500 focus:ring-1 focus:ring-red-500 placeholder:text-gray-500" placeholder="Describe the issue..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-[#151921] px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
+                    <button type="button" onclick="submitReport()" class="inline-flex w-full justify-center rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto">Submit Report</button>
+                    <button type="button" onclick="closeReportModal()" class="mt-3 inline-flex w-full justify-center rounded-lg bg-white/5 px-3 py-2 text-sm font-semibold text-gray-300 shadow-sm ring-1 ring-inset ring-white/10 hover:bg-white/10 sm:mt-0 sm:w-auto">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-[70] flex flex-col gap-2"></div>
 
     <script src="js/config.js"></script>
     <script src="js/site_branding.js"></script>
