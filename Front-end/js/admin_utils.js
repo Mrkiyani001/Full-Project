@@ -38,11 +38,14 @@ function renderAdminSidebar(activePageId) {
         }
     }
 
-    const avatarUrl = avatarPath 
-        ? (avatarPath.startsWith('http') 
-            ? avatarPath 
-            : (avatarPath.startsWith('storage/') ? `${window.PUBLIC_URL}/${avatarPath}` : `${window.PUBLIC_URL}/storage/${avatarPath}`))
-        : `https://ui-avatars.com/api/?name=${encodeURIComponent(ADMIN_USER_DATA.name)}&background=215bed&color=fff`;
+    const getAdminAvatarUrl = (path) => {
+        if (!path) return '';
+        if (path.startsWith('http')) return path;
+        const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+        return cleanPath.startsWith('storage/') ? `${window.PUBLIC_URL}/${cleanPath}` : `${window.PUBLIC_URL}/storage/${cleanPath}`;
+    };
+
+    const avatarUrl = avatarPath ? getAdminAvatarUrl(avatarPath) : `https://ui-avatars.com/api/?name=${encodeURIComponent(ADMIN_USER_DATA.name)}&background=215bed&color=fff`;
 
     const menuItems = [
         { id: 'dashboard', label: 'Dashboard', icon: 'grid_view', link: 'admin-dashboard.html' },

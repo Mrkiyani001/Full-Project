@@ -21,8 +21,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         const logoTextElements = document.querySelectorAll('#site-logo-text');
         logoTextElements.forEach(el => el.textContent = siteName);
 
+        // Helper to construct URL
+        const getStorageUrl = (path) => {
+            if (!path) return '';
+            if (path.startsWith('http')) return path;
+            
+            // Remove leading slash if present
+            const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+            
+            // Check if already has storage/ prefix
+            if (cleanPath.startsWith('storage/')) {
+                return `${BASE_URL}/${cleanPath}`;
+            }
+            return `${BASE_URL}/storage/${cleanPath}`;
+        };
+
         // C. Update Favicon (Browser Tab Icon)
-        const faviconPath = settings.favicon ? `${BASE_URL}/storage/${settings.favicon}` : '';
+        const faviconPath = getStorageUrl(settings.favicon);
         if (faviconPath) {
             let link = document.querySelector("link[rel*='icon']");
             if (!link) {
@@ -34,7 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // D. Update Logo Image
-        const logoPath = settings.logo ? `${BASE_URL}/storage/${settings.logo}` : '';
+        const logoPath = getStorageUrl(settings.logo);
         const logoImgElements = document.querySelectorAll('#site-logo-img');
 
         logoImgElements.forEach(img => {
