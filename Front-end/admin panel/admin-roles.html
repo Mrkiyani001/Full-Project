@@ -40,6 +40,7 @@
         // admin_utils.js lines 6-7 define ADMIN_TOKEN.
     </script>
     <script src="../js/config.js"></script>
+    <script src="../js/post_utils.js"></script>
     <script src="../js/site_branding.js"></script>
     <script src="../js/admin_utils.js"></script>
 
@@ -279,8 +280,9 @@
                 if(handleAdminApiError(res)) return;
 
                 const data = await res.json();
+
                 if(data.success) {
-                    alert('Permissions Saved!');
+                    showToast('Permissions Saved!', 'success');
                     // Update local data
                     const roleIdx = rolesData.findIndex(r => r.id === selectedRoleId);
                     if(roleIdx > -1) {
@@ -289,7 +291,7 @@
                          renderRolesList();
                     }
                 } else {
-                    alert('Error: ' + data.message);
+                    showToast('Error: ' + data.message, 'error');
                 }
             } catch(e) { console.error(e); }
         }
@@ -311,43 +313,44 @@
                 if(handleAdminApiError(res)) return;
 
                 const data = await res.json();
+
                 if(data.success) {
                     closeCreateRoleModal();
                     await fetchRoles(); // Refresh list
                     renderRolesList();
                     document.getElementById('new-role-name').value = '';
                 } else {
-                    alert(data.message);
+                    showToast(data.message, 'error');
                 }
             } catch(e) { console.error(e); }
         }
 
         async function deleteRole(e, id) {
             e.stopPropagation();
-            if(!confirm('Are you sure? This cannot be undone.')) return;
-            try {
-                const res = await fetch(`${API_BASE_URL}/role/delete_role`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: id })
-                });
-
-                if(handleAdminApiError(res)) return;
-
-                const data = await res.json();
-                if(data.success) {
-                     if(selectedRoleId === id) {
-                        selectedRoleId = null;
-                        document.getElementById('empty-state').classList.remove('hidden');
-                        document.getElementById('permissions-header').classList.add('hidden');
-                        document.getElementById('permissions-grid').classList.add('hidden');
-                     }
-                     await fetchRoles();
-                     renderRolesList();
-                } else {
-                    alert(data.message);
-                }
-            } catch(e) { console.error(e); }
+            
+            showConfirmModal('Are you sure? This cannot be undone.', async () => {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/role/delete_role`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: id })
+                    });
+                    if(handleAdminApiError(res)) return;
+                    const data = await res.json();
+                    if(data.success) {
+                        if(selectedRoleId === id) {
+                            selectedRoleId = null;
+                            document.getElementById('empty-state').classList.remove('hidden');
+                            document.getElementById('permissions-header').classList.add('hidden');
+                            document.getElementById('permissions-grid').classList.add('hidden');
+                        }
+                        await fetchRoles();
+                        renderRolesList();
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                } catch(e) { console.error(e); }
+            });
         }
 
         function openCreatePermissionModal() { document.getElementById('create-permission-modal').classList.remove('hidden'); }
@@ -376,15 +379,15 @@
                     }
                     document.getElementById('new-permission-name').value = '';
                 } else {
-                    alert(data.message); 
+                    showToast(data.message, 'error'); 
                 }
             } catch(e) { console.error(e); }
         }
 
         async function deletePermission(e, name) {
             e.preventDefault(); e.stopPropagation();
-            if(!confirm(`Delete permission "${name}"? This will remove it from ALL roles.`)) return;
-            try {
+            showConfirmModal(`Delete permission "${name}"? This will remove it from ALL roles.`, async () => {
+                try {
                 const res = await fetch(`${API_BASE_URL}/role/delete_permission`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}`, 'Content-Type': 'application/json' },
@@ -395,16 +398,18 @@
 
                 const data = await res.json();
                 if(data.success) {
-                     await fetchPermissions();
-                     if(selectedRoleId) {
-                         const role = rolesData.find(r => r.id === selectedRoleId);
-                         if(role) renderPermissionsGrid(role);
-                     }
+                        await fetchPermissions();
+                        if(selectedRoleId) {
+                            const role = rolesData.find(r => r.id === selectedRoleId);
+                            if(role) renderPermissionsGrid(role);
+                        }
                 } else {
-                    alert(data.message);
+                    showToast(data.message, 'error');
                 }
-            } catch(e) { console.error(e); }
+                } catch(e) { console.error(e); }
+            });
         }
+
     </script>
 </body>
 </html>

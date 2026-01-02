@@ -198,7 +198,7 @@ class CommentsRepliesController extends BaseController
             }
             $owner = $commentReply->user;
             if(!$owner){
-                if($user->hasRole('super admin','admin')){
+                if($user->hasRole(['super admin','admin'])){
                     DeleteCommentReply::dispatch(
                         $user->id,
                         $request->id
@@ -216,15 +216,15 @@ class CommentsRepliesController extends BaseController
                     $authorized = true;
                 }
             }elseif($owner->hasRole('admin')){
-                if($user->hasRole('admin','super admin')){
+                if($user->hasRole(['admin','super admin'])){
                     $authorized = true;
                 }
             }elseif($owner->hasRole('moderator')){
-                if($user->hasRole('moderator','admin','super admin')){
+                if($user->hasRole(['moderator','admin','super admin'])){
                     $authorized = true;
                 }
             }else{
-                if($user->hasRole('admin','super admin')){
+                if($user->hasRole(['admin','super admin'])){
                     $authorized = true;
                 }
             }

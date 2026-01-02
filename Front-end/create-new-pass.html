@@ -345,7 +345,7 @@
             const email = urlParams.get('email');
 
             if (!token || !email) {
-                alert('Invalid reset link. Please request a new password reset.');
+                showToast('Invalid reset link. Please request a new password reset.');
                 return;
             }
 
@@ -355,17 +355,17 @@
             const btnText = btn.querySelector('span:first-child');
 
             if (!password || !confirmPassword) {
-                alert('Please fill in all fields.');
+                showToast('Please fill in all fields.');
                 return;
             }
 
             if (password !== confirmPassword) {
-                alert('Passwords do not match.');
+                showToast('Passwords do not match.');
                 return;
             }
 
             if (password.length < 6) {
-                alert('Password must be at least 6 characters.');
+                showToast('Password must be at least 6 characters.');
                 return;
             }
 
@@ -395,16 +395,16 @@
 
                 if (response.ok && data.success) {
                     isSuccess = true;
-                    alert('Password reset successful! Redirecting to login...');
+                    showToast('Password reset successful! Redirecting to login...');
                     setTimeout(() => {
                         window.location.href = 'login.html';
                     }, 1500);
                 } else {
-                    alert(data.message || 'Failed to reset password.');
+                    showToast(data.message || 'Failed to reset password.');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('An error occurred. Please try again.');
+                showToast('An error occurred. Please try again.');
             } finally {
                 if (!isSuccess) {
                     btnText.textContent = originalText;

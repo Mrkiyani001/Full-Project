@@ -94,42 +94,7 @@
             transition: background-color 5000s ease-in-out 0s;
         }
 
-        /* Toast Notification */
-        #toast-container {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            pointer-events: none;
-        }
-        .toast {
-            background: rgba(16, 21, 34, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 12px 24px;
-            border-radius: 12px;
-            color: white;
-            font-size: 0.9rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            opacity: 0;
-            transform: translateY(-20px);
-            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            pointer-events: auto;
-        }
-        .toast.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        .toast.success { border-left: 4px solid #215bed; }
-        .toast.error { border-left: 4px solid #ef4444; }
+
     </style>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen relative overflow-x-hidden antialiased selection:bg-primary/30 selection:text-white flex flex-col">
@@ -284,29 +249,65 @@
         btn.disabled = !checkbox.checked;
     }
 
-    function showToast(message, type = 'success') {
-        const container = document.getElementById('toast-container');
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        
-        let icon = type === 'success' ? 'check_circle' : 'error';
-        
-        toast.innerHTML = `
-            <span class="material-symbols-outlined text-${type === 'success' ? 'emerald-400' : 'red-400'}">${icon}</span>
-            <div>${message}</div>
+    // --- STANDARD TOAST SYSTEM ---
+    function injectToastStyles() {
+        if (document.getElementById('toast-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'toast-styles';
+        style.textContent = `
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes fadeOut {
+                from { opacity: 1; }
+                to { opacity: 0; }
+            }
+            .toast-notification {
+                animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            .toast-notification.hiding {
+                animation: fadeOut 0.3s ease-in forwards;
+            }
         `;
-        
-        container.appendChild(toast);
-        
-        // Trigger animation
-        requestAnimationFrame(() => {
-            toast.classList.add('show');
-        });
+        document.head.appendChild(style);
+    }
+    injectToastStyles();
 
-        setTimeout(() => {
-            toast.classList.remove('show');
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container') || (() => {
+            const c = document.createElement('div');
+            c.id = 'toast-container';
+            c.className = 'fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none';
+            document.body.appendChild(c);
+            return c;
+        })();
+
+        const toast = document.createElement('div');
+        const bgColor = type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400';
+        const icon = type === 'success' ? 'check_circle' : 'error';
+
+        toast.className = `toast-notification ${bgColor} border backdrop-blur-xl px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 min-w-[300px] pointer-events-auto transform transition-all duration-300 hover:scale-[1.02] cursor-pointer`;
+        toast.innerHTML = `
+            <span class="material-symbols-outlined text-[20px]">${icon}</span>
+            <div class="flex-1 text-sm font-medium pr-2 text-white">${message}</div>
+        `;
+
+        // Remove on click
+        toast.onclick = () => {
+            toast.classList.add('hiding');
             setTimeout(() => toast.remove(), 300);
-        }, 3000);
+        };
+
+        container.appendChild(toast);
+
+        // Auto remove
+        setTimeout(() => {
+            if (toast.isConnected) {
+                toast.classList.add('hiding');
+                setTimeout(() => toast.remove(), 300);
+            }
+        }, 5000);
     }
 
     document.getElementById('register-btn').addEventListener('click', async () => {

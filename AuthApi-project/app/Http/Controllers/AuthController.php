@@ -5,15 +5,15 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\BaseController;
+use App\Models\Settings;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
-
-// use Illuminate\Support\Facades\DB;
-
+use Illuminate\Auth\Events\Verified;
 
 class AuthController extends BaseController
 {
@@ -34,12 +34,22 @@ class AuthController extends BaseController
                 'password' => Hash::make($request->password),
             ]);
             $user->assignRole('user');
+            
+            // Send email verification notification (optional - won't fail registration if email not configured)
+            try {
+                $user->sendEmailVerificationNotification();
+                $message = 'Registration successful! Please check your email to verify your account.';
+            } catch (\Exception $emailError) {
+                Log::warning('Email verification could not be sent: ' . $emailError->getMessage());
+                $message = 'Registration successful! Please login to continue.';
+            }
+            
             // // DB::commit();
             // $token = auth('api')->login($user);
             // return $this->respondWithToken($token, $user);
             return response()->json([
                 'success' => true,
-                'message' => 'Registration successful! Please login to continue.',
+                'message' => $message,
                 'data' => $user
             ], 201);
         } catch (\Exception $e) {
@@ -79,7 +89,7 @@ class AuthController extends BaseController
             }
 
             // Check Maintenance Mode
-            $settings = \App\Models\Settings::first();
+            $settings = Settings::first();
             if ($settings && $settings->maintenance_mode) {
                 if (!$user->hasRole('super admin') && !$user->hasRole('admin')) {
                     return response()->json([
@@ -102,6 +112,48 @@ class AuthController extends BaseController
                 'message' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function verify_email(Request $request)
+    {
+        // $request->route('id') is the user ID
+        $user = User::find($request->route('id'));
+
+        if (!$user) {
+             return response()->json(['message' => 'Invalid verification link.'], 400); 
+        }
+
+        if (! hash_equals((string) $request->route('hash'), sha1($user->getEmailForVerification()))) {
+            return response()->json(['message' => 'Invalid verification link.'], 400);
+        }
+
+        if ($user->hasVerifiedEmail()) {
+             // Redirect to frontend login with message
+             return redirect()->to('https://web.kiyanibhai.site/login.html?verified=1');
+        }
+
+        if ($user->markEmailAsVerified()) {
+            event(new Verified($user));
+        }
+
+        return redirect()->to('https://web.kiyanibhai.site/login.html?verified=1');
+    }
+
+    public function resend_verification(Request $request)
+    {
+        $this->validateRequest($request, [
+             'email' => 'required|email|exists:users,email'
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if ($user->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Email already verified.']);
+        }
+
+        $user->sendEmailVerificationNotification();
+
+        return response()->json(['message' => 'Verification link sent!']);
     }
 
     public function getUser(Request $request)

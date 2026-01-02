@@ -71,7 +71,12 @@ class RolePermissionController extends BaseController
             if (empty($roles)) {
                 $roles = ['user'];
             }
-
+            // Protection: Only Super Admin can assign Super Admin role
+            if (in_array('super admin', $roles)) {
+                if (!$user->hasRole('super admin')) {
+                    return $this->response(false, 'Only Super Admin can assign the Super Admin role', null, 403);
+                }
+            }
             // syncRoles accepts string or array
             $targetUser->syncRoles($roles);
             return $this->response(true, 'Roles synced successfully', $targetUser, 200);
@@ -90,8 +95,14 @@ class RolePermissionController extends BaseController
             if (!$user) {
                 return $this->unauthorized();
             }
-            $user = User::findOrFail($request->user_id);
-            $user->removeRole($request->role);
+            $targetUser = User::findOrFail($request->user_id);
+            $targetUser->removeRole($request->role);
+
+            // Fallback: If user has no roles left, assign 'user' role
+            if ($targetUser->roles()->count() == 0) {
+                $targetUser->assignRole('user');
+            }
+
             return $this->response(true, 'Role revoked successfully', null, 200);
         }catch(\Exception $e){
             Log::error("Error revoking role: ".$e->getMessage());
