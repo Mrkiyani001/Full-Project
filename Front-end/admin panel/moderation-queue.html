@@ -164,6 +164,7 @@
     </main>
 
     <script src="../js/config.js"></script>
+    <script src="../js/post_utils.js"></script>
     <script src="../js/site_branding.js"></script>
     <script src="../js/admin_utils.js"></script>
     <script>
@@ -196,7 +197,7 @@
 
             try {
                 const response = await fetch(`${API_BASE_URL}/pending_posts`, {
-                    headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
                 });
 
                 if(handleAdminApiError(response)) return;
@@ -298,7 +299,7 @@
                 const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${ADMIN_TOKEN}`,
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ id: postId })
@@ -316,11 +317,11 @@
                         if (!isNaN(count)) countEl.textContent = count - 1;
                     }, 300);
                 } else {
-                    alert('Action failed: ' + data.message);
+                    showToast('Action failed: ' + data.message, 'error');
                 }
             } catch (e) {
                 console.error(e);
-                alert('Server error.');
+                showToast('Server error.', 'error');
             }
         }
 

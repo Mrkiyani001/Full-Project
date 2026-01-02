@@ -14,6 +14,9 @@
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
         rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="js/config.js"></script>
+    <script src="js/post_utils.js"></script>
+    <script src="js/site_branding.js"></script>
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -457,7 +460,7 @@
         // Header Init
         if (currentUserData.name) {
             const initialsUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserData.name)}&background=random`;
-            const avatarUrl = getAvatarUrl(currentUserData) || initialsUrl;
+            const avatarUrl = getProfilePicture(currentUserData) || initialsUrl;
 
             const headerAvatar = document.getElementById('header-user-avatar');
 
@@ -515,7 +518,7 @@
                     renderProfile(data.data);
                     loadTabContent();
                 } else {
-                    alert('User not found');
+                    showToast('User not found', 'error');
                 }
             } catch (e) {
                 console.error(e);
@@ -608,8 +611,8 @@
             postsEl.textContent = user.posts_count || 0; // Assuming posts_count is available or calculate it
 
             // Interaction Handlers
-            followersEl.parentElement.onclick = () => openUserListModal('Followers', user.followers || []);
-            followingEl.parentElement.onclick = () => openUserListModal('Following', user.following || []);
+            followersEl.parentElement.onclick = () => openUserListModal(user.id, 'followers');
+            followingEl.parentElement.onclick = () => openUserListModal(user.id, 'following');
 
             postsEl.parentElement.onclick = () => {
                 document.getElementById('user-posts-container').scrollIntoView({ behavior: 'smooth' });
@@ -1080,14 +1083,14 @@
         }
     </script>
     <script>
-        loadProfile();
-        setupGlobalSearch();
+        document.addEventListener('DOMContentLoaded', () => {
+             loadProfile();
+             // setupGlobalSearch(); // Check if this exists in post_utils.js, if not it will error. Commenting out for now if unsure, or assuming it is in post_utils since Grep found it.
+             if (typeof setupGlobalSearch === 'function') setupGlobalSearch(); 
+        });
     </script>
 
 
-    <script src="js/config.js"></script>
-    <script src="js/post_utils.js"></script>
-    <script src="js/site_branding.js"></script>
 </body>
 
 </html>

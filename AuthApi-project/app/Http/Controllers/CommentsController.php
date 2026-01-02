@@ -211,7 +211,7 @@ class CommentsController extends BaseController
             }
             $owner = $comment->user;
             if(!$owner){
-                if($user->hasRole('admin','super admin')){
+                if($user->hasRole(['admin','super admin'])){
                     DeleteComment::dispatch(
                         $user->id,
                         $request->id
@@ -229,15 +229,15 @@ class CommentsController extends BaseController
                     $authorized = true;
                 }
             }elseif($owner->hasRole('admin')){
-                if($user->hasRole('admin','super admin')){
+                if($user->hasRole(['admin','super admin'])){
                     $authorized = true;
                 }
             }elseif($owner->hasRole('moderator')){
-                if($user->hasRole('moderator','admin','super admin')){
+                if($user->hasRole(['moderator','admin','super admin'])){
                     $authorized = true;
                 }
             }else{
-                if($user->hasRole('admin','super admin')){
+                if($user->hasRole(['admin','super admin'])){
                     $authorized = true;
                 }
             }

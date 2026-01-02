@@ -445,10 +445,11 @@ const toggleLike = async (btn, reelId) => {
             }
             countSpan.textContent = formatNumber(currentCount);
             console.error('Like failed:', data.message);
+            showToast('Like failed', 'error');
         }
     } catch (error) {
         console.error('Error liking reel:', error);
-        // Revert?
+        showToast('Like error', 'error');
     }
 };
 
@@ -493,9 +494,11 @@ const toggleSave = async (btn, reelId) => {
                 icon.style.fontVariationSettings = "'FILL' 0";
             }
             console.error('Save failed:', data.message);
+            showToast('Save failed', 'error');
         }
     } catch (error) {
         console.error('Error saving reel:', error);
+        showToast('Save error', 'error');
     }
 };
 
@@ -601,13 +604,13 @@ const shareReel = async (reelId) => {
         });
         const data = await response.json();
         if (data.success) {
-            alert('Reel shared successfully!');
+            showToast('Reel shared successfully!', 'success');
         } else {
-            alert('Failed to share reel');
+            showToast('Failed to share reel', 'error');
         }
     } catch (e) {
         console.error(e);
-        alert('Error sharing reel');
+        showToast('Error sharing reel', 'error');
     }
 }
 
@@ -1786,58 +1789,58 @@ window.incrementReelView = incrementReelView;
 
 // Reel Actions: Edit & Delete
 
-window.deleteReel = async function deleteReel(reelId) {
-    if(!confirm("Are you sure you want to delete this reel?")) return;
-    
-    // Optimistic UI: Remove Reel Slide immediately
-    const reelContainer = document.querySelector(`.snap-center[data-id="${reelId}"]`) || 
-                          // try to find by button context if id not set on container
-                          Array.from(document.querySelectorAll('button')).find(b => b.onclick && b.onclick.toString().includes(`deleteReel(${reelId})`))?.closest('.snap-center');
-    
-    let removed = false;
-    if (reelContainer) {
-        // Animation
-        reelContainer.style.transition = "opacity 0.3s, transform 0.3s";
-        reelContainer.style.opacity = "0";
-        reelContainer.style.transform = "scale(0.9)";
-        setTimeout(() => reelContainer.remove(), 300);
-        removed = true;
-    }
-
-    try {
-        const token = localStorage.getItem('auth_token');
-        const response = await fetch(`${API_BASE_URL}/delete_reel`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ reel_id: reelId })
-        });
+window.deleteReel = function(reelId) {
+    showConfirmModal("Are you sure you want to delete this reel?", async () => {
+        // Optimistic UI: Remove Reel Slide immediately
+        const reelContainer = document.querySelector(`.snap-center[data-id="${reelId}"]`) || 
+                              // try to find by button context if id not set on container
+                              Array.from(document.querySelectorAll('button')).find(b => b.onclick && b.onclick.toString().includes(`deleteReel(${reelId})`))?.closest('.snap-center');
         
-        const data = await response.json();
-        if(data.success) {
-            showToast('Reel deleted', 'success');
-             // Update local cache
-            try {
-                const cached = localStorage.getItem('reels_cache');
-                if(cached) {
-                    let parsed = JSON.parse(cached);
-                    if(Array.isArray(parsed)) parsed = parsed.filter(r => r.id !== reelId);
-                    else if (parsed.data) parsed.data = parsed.data.filter(r => r.id !== reelId);
-                    localStorage.setItem('reels_cache', JSON.stringify(parsed));
-                }
-            } catch(e) {}
-            
-            if(!removed) setTimeout(() => window.location.reload(), 1000);
-        } else {
-             showToast(data.message || 'Error', 'error');
-             if(removed) window.location.reload();
+        let removed = false;
+        if (reelContainer) {
+            // Animation
+            reelContainer.style.transition = "opacity 0.3s, transform 0.3s";
+            reelContainer.style.opacity = "0";
+            reelContainer.style.transform = "scale(0.9)";
+            setTimeout(() => reelContainer.remove(), 300);
+            removed = true;
         }
-    } catch(e) {
-        console.error(e);
-        if(removed) window.location.reload();
-    }
+
+        try {
+            const token = localStorage.getItem('auth_token');
+            const response = await fetch(`${API_BASE_URL}/delete_reel`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ reel_id: reelId })
+            });
+            
+            const data = await response.json();
+            if(data.success) {
+                showToast('Reel deleted', 'success');
+                 // Update local cache
+                try {
+                    const cached = localStorage.getItem('reels_cache');
+                    if(cached) {
+                        let parsed = JSON.parse(cached);
+                        if(Array.isArray(parsed)) parsed = parsed.filter(r => r.id !== reelId);
+                        else if (parsed.data) parsed.data = parsed.data.filter(r => r.id !== reelId);
+                        localStorage.setItem('reels_cache', JSON.stringify(parsed));
+                    }
+                } catch(e) {}
+                
+                if(!removed) setTimeout(() => window.location.reload(), 1000);
+            } else {
+                 showToast(data.message || 'Error', 'error');
+                 if(removed) window.location.reload();
+            }
+        } catch(e) {
+            console.error(e);
+            if(removed) window.location.reload();
+        }
+    });
 };
 
 window.editReel = async (reelId) => {
@@ -1870,33 +1873,7 @@ window.editReel = async (reelId) => {
 
 // --- Utils: Toast & Report (Copied here for Reels context) ---
 
-window.showToast = function(message, type = 'success') {
-    const container = document.getElementById('toast-container');
-    if (!container) return; // Should be in HTML
-
-    const toast = document.createElement('div');
-    toast.className = `flex items-center gap-2 px-4 py-3 rounded-xl shadow-xl backdrop-blur-md border border-white/10 transform transition-all duration-300 translate-y-10 opacity-0 z-[100] ${
-        type === 'success' ? 'bg-[#1c1f27]/90 text-green-400' : 'bg-[#1c1f27]/90 text-red-400'
-    }`;
-    
-    toast.innerHTML = `
-        <span class="material-symbols-outlined text-[20px]">${type === 'success' ? 'check_circle' : 'error'}</span>
-        <span class="text-sm font-medium text-white">${message}</span>
-    `;
-
-    container.appendChild(toast);
-
-    // Animate In
-    requestAnimationFrame(() => {
-        toast.classList.remove('translate-y-10', 'opacity-0');
-    });
-
-    // Remove after 3s
-    setTimeout(() => {
-        toast.classList.add('translate-y-10', 'opacity-0');
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
+// --- Utils: Toast & Report (Uses global showToast) ---
 
 // --- Report Functions ---
 
@@ -1989,49 +1966,49 @@ document.addEventListener('click', (e) => {
     }
 });
 
-window.deleteReelComment = async function(commentId, btn, type) {
-    if(!confirm("Delete this?")) return;
-    
-    // Check local element by ID prefix
-    const prefix = type === 'reply' ? 'comment-row-r-' : 'comment-row-c-';
-    const commentRow = document.getElementById(`${prefix}${commentId}`);
-    
-    // Optimistic Remove
-    if(commentRow) {
-        commentRow.style.transition = 'all 0.3s ease';
-        commentRow.style.opacity = '0';
-        commentRow.style.transform = 'translateX(20px)';
-        setTimeout(() => commentRow.remove(), 300);
-    }
-    
-    try {
-        const token = localStorage.getItem('auth_token');
-        // Define endpoint and body based on type
-        const endpoint = type === 'reply' ? `${API_BASE_URL}/delete_comment_reply` : `${API_BASE_URL}/delete_comment`;
+window.deleteReelComment = function(commentId, btn, type) {
+    showConfirmModal("Delete this?", async () => {
+        // Check local element by ID prefix
+        const prefix = type === 'reply' ? 'comment-row-r-' : 'comment-row-c-';
+        const commentRow = document.getElementById(`${prefix}${commentId}`);
         
-        const response = await fetch(endpoint, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: commentId })
-        });
-        const data = await response.json();
-        if(!data.success) {
-            alert(data.message || 'Delete failed');
-            // TODO: Restore UI if failed?
-        } else {
-             // Decrement Count (Only for Top Level Comments)
-             if (type !== 'reply' && currentReelIdForComments) {
-                 const commentBtn = document.querySelector(`button[onclick="openComments('${currentReelIdForComments}')"] span:last-child, button[onclick="openComments(${currentReelIdForComments})"] span:last-child`);
-                 if(commentBtn) {
-                     let c = parseInt(commentBtn.textContent.replace(/,/g, '')) || 0;
-                     if(c > 0) commentBtn.textContent = formatNumber(c - 1);
-                 }
-             }
+        // Optimistic Remove
+        if(commentRow) {
+            commentRow.style.transition = 'all 0.3s ease';
+            commentRow.style.opacity = '0';
+            commentRow.style.transform = 'translateX(20px)';
+            setTimeout(() => commentRow.remove(), 300);
         }
-    } catch(e) {
-        console.error(e);
-        alert('Error deleting');
-    }
+        
+        try {
+            const token = localStorage.getItem('auth_token');
+            // Define endpoint and body based on type
+            const endpoint = type === 'reply' ? `${API_BASE_URL}/delete_comment_reply` : `${API_BASE_URL}/delete_comment`;
+            
+            const response = await fetch(endpoint, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: commentId })
+            });
+            const data = await response.json();
+            if(!data.success) {
+                showToast(data.message || 'Delete failed', 'error');
+                // TODO: Restore UI if failed?
+            } else {
+                 // Decrement Count (Only for Top Level Comments)
+                 if (type !== 'reply' && currentReelIdForComments) {
+                     const commentBtn = document.querySelector(`button[onclick="openComments('${currentReelIdForComments}')"] span:last-child, button[onclick="openComments(${currentReelIdForComments})"] span:last-child`);
+                     if(commentBtn) {
+                         let c = parseInt(commentBtn.textContent.replace(/,/g, '')) || 0;
+                         if(c > 0) commentBtn.textContent = formatNumber(c - 1);
+                     }
+                 }
+            }
+        } catch(e) {
+            console.error(e);
+            showToast('Error deleting', 'error');
+        }
+    });
 };
 
 window.editReelComment = function(commentId, type) {
@@ -2114,11 +2091,11 @@ window.saveEditComment = async function(commentId, type) {
         const data = await response.json();
         
         if(!data.success) {
-            alert('Update failed: ' + data.message);
+            showToast('Update failed: ' + data.message, 'error');
         }
     } catch(e) {
         console.error(e);
-        alert('Update error');
+        showToast('Update error', 'error');
     }
 };
 

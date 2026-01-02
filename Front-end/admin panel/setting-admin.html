@@ -258,6 +258,7 @@
     </main>
 
     <script src="../js/config.js"></script>
+    <script src="../js/post_utils.js"></script>
     <script src="../js/site_branding.js"></script>
     <script src="../js/admin_utils.js"></script>
     <script>
@@ -373,14 +374,14 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    alert('Settings updated successfully!');
+                    showToast('Settings updated successfully!', 'success');
                     loadSettings(); // Reload to see new images
                 } else {
-                    alert('Failed: ' + JSON.stringify(data.message));
+                    showToast('Failed: ' + (typeof data.message === 'string' ? data.message : JSON.stringify(data.message)), 'error');
                 }
             } catch (e) {
                 console.error(e);
-                alert('An error occurred.');
+                showToast('An error occurred.', 'error');
             } finally {
                 btn.textContent = 'Save Changes';
                 btn.disabled = false;

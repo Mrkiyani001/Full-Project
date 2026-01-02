@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const handleVideoSelect = (file) => {
         if (file.size > 100 * 1024 * 1024) { // 100MB limit
-            alert('File too large. Max size is 100MB.');
+            showToast('File too large. Max size is 100MB.');
             return;
         }
 
@@ -168,14 +168,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Option B: Select Frame
     selectFrameBtn.addEventListener('click', () => {
         if (!state.videoFile && !state.isEditing) { // Allow if editing might have existing video? No, need file object for capture usually.
-            alert("Please upload a video first.");
+            showToast("Please upload a video first.");
             return;
         }
 
         // If editing and no new file, we can't capture easily from cross-origin video (CORS).
         // Check if we have a file.
         if (state.isEditing && !state.videoFile) {
-            alert("Cannot edit thumbnail of existing video. Please upload a new video to change thumbnail.");
+            showToast("Cannot edit thumbnail of existing video. Please upload a new video to change thumbnail.");
             return;
         }
 
@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Strict check: Only require video if NOT updating
         if (!state.videoFile && !isUpdateMode) {
-            alert('Please select a video first.');
+            showToast('Please select a video first.');
             return;
         }
 
@@ -350,7 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error(error);
-            alert('Error: ' + error.message);
+            showToast('Error: ' + error.message);
             // Reset Button
             postBtn.disabled = false;
             postBtn.querySelector('#post-btn-text').textContent = originalText;

@@ -43,6 +43,9 @@
             },
         }
     </script>
+    <script src="../js/config.js"></script>
+    <script src="../js/post_utils.js"></script>
+    <script src="../js/admin_utils.js"></script>
     <style>
         /* Custom scrollbar for webkit */
         ::-webkit-scrollbar {
@@ -133,8 +136,8 @@
                 return `
                 <label class="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/5 cursor-pointer transition-colors group">
                     <span class="text-sm font-medium text-slate-300 group-hover:text-white">${role.name}</span>
-                    <input type="checkbox" name="roles" value="${role.name}" ${isChecked ? 'checked' : ''} 
-                        class="w-5 h-5 rounded border-slate-600 bg-slate-700 text-primary focus:ring-offset-0 focus:ring-0">
+                    <input type="radio" name="roles" value="${role.name}" ${isChecked ? 'checked' : ''} 
+                        class="w-5 h-5 rounded-full border-slate-600 bg-slate-700 text-primary focus:ring-offset-0 focus:ring-0">
                 </label>
                 `;
             }).join('');
@@ -171,29 +174,14 @@
             }
         });
 
-        // Toast Notification Helper
-        function showToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            toast.className = `fixed bottom-6 right-6 px-6 py-4 rounded-xl backdrop-blur-md shadow-2xl transform transition-all duration-500 translate-y-20 opacity-0 z-50 flex items-center gap-3 border ${type === 'success' ? 'bg-black/80 border-green-500/30' : 'bg-black/80 border-red-500/30'}`;
-            toast.innerHTML = `
-                <span class="material-symbols-outlined ${type === 'success' ? 'text-green-400' : 'text-red-400'}">
-                    ${type === 'success' ? 'check_circle' : 'error'}
-                </span>
-                <span class="text-white font-medium text-sm">${message}</span>
-            `;
-            document.body.appendChild(toast);
-            requestAnimationFrame(() => toast.classList.remove('translate-y-20', 'opacity-0'));
-            setTimeout(() => {
-                toast.classList.add('translate-y-20', 'opacity-0');
-                setTimeout(() => toast.remove(), 500);
-            }, 3000);
-        }
+
 
         async function submitRoles(e) {
             e.preventDefault();
             const userId = document.getElementById('role-user-id').value;
-            const checkboxes = document.querySelectorAll('input[name="roles"]:checked');
-            const selectedRoles = Array.from(checkboxes).map(cb => cb.value);
+            // Changed to Radio Button: Select single checked input
+            const selectedRadio = document.querySelector('input[name="roles"]:checked');
+            const selectedRoles = selectedRadio ? [selectedRadio.value] : []; // Wrap in array for backend compatibility
 
             // If empty, maybe warn? or allow clearing roles (assigning empty array)
             // But usually 'User' role is default. Let's just submit specific roles.
@@ -218,13 +206,13 @@
                 if(data.success) {
                     closeRoleModal();
                     loadUsers(); // Refresh table
-                    alert('Roles updated successfully');
+                    showToast('Roles updated successfully', 'success');
                 } else {
-                    alert('Failed: ' + data.message);
+                    showToast('Failed: ' + data.message, 'error');
                 }
             } catch(e) {
                 console.error(e);
-                alert('Error updating roles');
+                showToast('Error updating roles', 'error');
             }
         }
 
@@ -401,29 +389,30 @@
 
         async function banUser(userId, currentStatus) {
             const action = currentStatus === 1 ? 'unban' : 'ban';
-            if(!confirm(`Are you sure you want to ${action} this user?`)) return;
+            
+            showConfirmModal(`Are you sure you want to ${action} this user?`, async () => {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/admin/ban_user`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ user_id: userId, action: action })
+                    });
 
-            try {
-                const response = await fetch(`${API_BASE_URL}/admin/ban_user`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ user_id: userId, action: action })
-                });
+                    // if(handleAdminApiError(response)) return; // Assuming this function exists in admin_utils.js
 
-                if(handleAdminApiError(response)) return;
-
-                const data = await response.json();
-                if(data.success) {
-                    // alert(`User ${action}ned successfully`);
-                    loadUsers(); // Refresh table
-                    loadStats(); // Refresh stats
-                } else {
-                    alert('Action failed: ' + data.message);
-                }
-            } catch(e) { console.error(e); }
+                    const data = await response.json();
+                    if(data.success) {
+                        showToast(`User ${action}ned successfully`, 'success');
+                        loadUsers(); // Refresh table
+                        loadStats(); // Refresh stats
+                    } else {
+                        showToast('Action failed: ' + data.message, 'error');
+                    }
+                } catch(e) { console.error(e); }
+            });
         }
 
         function renderUserTable(users) {
