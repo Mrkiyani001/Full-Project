@@ -304,13 +304,15 @@
 
                     if (s.logo) {
                         const img = document.getElementById('logo-preview');
-                        img.src = `http://127.0.0.1:8000/storage/${s.logo}`;
-                        img.classList.remove('opacity-50'); // Show full opacity if loaded
+                        const path = s.logo.startsWith('/') ? s.logo.substring(1) : s.logo;
+                        img.src = path.startsWith('http') ? path : (path.startsWith('storage/') ? `${PUBLIC_URL}/${path}` : `${PUBLIC_URL}/storage/${path}`);
+                        img.classList.remove('opacity-50');
                         img.classList.add('opacity-100');
                     }
                     if (s.favicon) {
                         const img = document.getElementById('favicon-preview');
-                        img.src = `http://127.0.0.1:8000/storage/${s.favicon}`;
+                        const path = s.favicon.startsWith('/') ? s.favicon.substring(1) : s.favicon;
+                        img.src = path.startsWith('http') ? path : (path.startsWith('storage/') ? `${PUBLIC_URL}/${path}` : `${PUBLIC_URL}/storage/${path}`);
                         img.classList.remove('opacity-50');
                         img.classList.add('opacity-100');
                     }

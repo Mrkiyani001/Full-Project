@@ -67,10 +67,49 @@
             -webkit-text-fill-color: white !important;
             transition: background-color 5000s ease-in-out 0s;
         }
+        /* Toast Notification */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .toast {
+            background: rgba(16, 21, 34, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 24px;
+            border-radius: 12px;
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            pointer-events: auto;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast.success { border-left: 4px solid #215bed; }
+        .toast.error { border-left: 4px solid #ef4444; }
     </style>
 </head>
 
 <body class="font-display antialiased text-white selection:bg-primary selection:text-white overflow-hidden">
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
     <!-- Main Container -->
     <div class="relative flex min-h-screen w-full flex-col justify-center items-center animated-bg overflow-hidden p-4">
         <!-- Background Ambient Glows -->
@@ -217,6 +256,31 @@
 </body>
     <script src="js/config.js"></script>
     <script>
+    
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        let icon = type === 'success' ? 'check_circle' : 'error';
+        
+        toast.innerHTML = `
+            <span class="material-symbols-outlined text-${type === 'success' ? 'emerald-400' : 'red-400'}">${icon}</span>
+            <span>${message}</span>
+        `;
+        
+        container.appendChild(toast);
+        
+        // Trigger animation
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
 
     document.getElementById('login-btn').addEventListener('click', async () => {
         const email = document.getElementById('email').value;
@@ -224,7 +288,7 @@
         const btn = document.getElementById('login-btn');
 
         if (!email || !password) {
-            alert('Please fill in both email and password.');
+            showToast('Please fill in both email and password.', 'error');
             return;
         }
 
@@ -251,24 +315,25 @@
                 if (token) {
                     localStorage.setItem('auth_token', token);
                     if (data.user) localStorage.setItem('user_data', JSON.stringify(data.user));
-                    alert('Login Successful!');
+                    showToast('Login Successful!', 'success');
                     // Redirect logic
-                    window.location.href = 'loading-screen.html';
+                    setTimeout(() => window.location.href = 'loading-screen.html', 1500);
                 } else {
                     console.log('Login success but no token found in expected paths', data);
-                    alert('Login successful but encountered an issue saving session.');
+                    showToast('Login successful but check console.', 'error');
                 }
             } else {
-                alert(data.message || 'Login failed');
+                showToast(data.message || 'Login failed', 'error');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('An error occurred. Please try again.');
+            showToast('An error occurred. Please try again.', 'error');
         } finally {
             btn.innerHTML = originalText;
             btn.disabled = false;
         }
     });
+
 </script>
 <script src="js/site_branding.js"></script>
 

@@ -1104,22 +1104,23 @@ async function toggleCommentSection(postId) {
                                         </button>
                                     </div>
 
-                                    <!-- Reply Input -->
-                                    <div id="reply-box-${comment.id}" class="hidden mt-3 ml-2 flex gap-2 items-center animate-fade-in-up">
-                                         <!-- Avatar or just input? -->
-                                         <button class="shrink-0">
+                                    ${repliesHTML}
+
+                                    <!-- Reply Input (Moved to bottom) -->
+                                    <div id="reply-box-${comment.id}" class="hidden mt-3 ml-2 flex gap-2 items-start animate-fade-in-up">
+                                         <button class="shrink-0 mt-0.5">
                                             ${renderAvatarHTML(currentUserData || userData, "w-6 h-6 rounded-full border border-white/10 object-cover")}
                                          </button>
                                          <div class="flex-1 relative">
                                             <textarea id="reply-input-${comment.id}" 
-                                                class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all resize-none overflow-hidden"
+                                                class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all resize-none overflow-hidden min-h-[38px]"
                                                 rows="1"
                                                 placeholder="Write a reply..."
                                                 oninput="this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'"></textarea>
-                                            <button onclick="submitReply(${comment.id})" class="absolute right-2 bottom-1.5 p-1 rounded-lg text-blue-400 hover:bg-blue-600/20 hover:text-white transition-all">
+                                            <button onclick="submitReply(${comment.id})" class="absolute right-2 bottom-2 p-1 rounded-lg text-blue-400 hover:bg-blue-600/20 hover:text-white transition-all">
                                                 <span class="material-symbols-outlined text-[16px]">send</span>
                                             </button>
-                                            <div class="absolute right-10 bottom-1.5">
+                                            <div class="absolute right-10 bottom-2">
                                                 <label for="reply-file-${comment.id}" class="cursor-pointer text-slate-400 hover:text-white transition-colors p-1">
                                                     <span class="material-symbols-outlined text-[18px]">attach_file</span>
                                                     <input type="file" id="reply-file-${comment.id}" class="hidden" onchange="handleCommentFileSelect(event, 'reply-preview-${comment.id}')">
@@ -1127,9 +1128,7 @@ async function toggleCommentSection(postId) {
                                             </div>
                                          </div>
                                     </div>
-                                    <div id="reply-preview-${comment.id}" class="mt-2 ml-12 hidden"></div>
-
-                                    ${repliesHTML}
+                                    <div id="reply-preview-${comment.id}" class="mt-2 ml-10 hidden"></div>
                                 </div>
                             </div>
                         `;
@@ -1148,16 +1147,19 @@ function toggleReplyInput(commentId, mention = '') {
     const box = document.getElementById(`reply-box-${commentId}`);
     const input = document.getElementById(`reply-input-${commentId}`);
     
-    box.classList.remove('hidden');
-    
-    if(mention) {
+    if (mention) {
+        box.classList.remove('hidden');
         input.value = mention;
+    } else {
+        box.classList.toggle('hidden');
     }
     
-    setTimeout(() => {
-        input.focus();
-        if(mention) input.setSelectionRange(input.value.length, input.value.length);
-    }, 50);
+    if (!box.classList.contains('hidden')) {
+        setTimeout(() => {
+            input.focus();
+            if(mention) input.setSelectionRange(input.value.length, input.value.length);
+        }, 50);
+    }
 }
 
 async function likeComment(commentId, btn) {
@@ -1242,7 +1244,7 @@ async function submitReply(commentId) {
         
         if(response.status === 200 || response.status === 202 || data.success) {
                 input.value = '';
-                toggleReplyInput(commentId);
+                toggleReplyInput(commentId); // This will now toggle it CLOSED (since it was open)
                 showToast('Reply posted! ↩️');
                 
                 // Immediate Append
