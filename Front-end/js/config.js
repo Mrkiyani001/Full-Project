@@ -10,7 +10,6 @@ if (typeof IS_LOCAL === 'undefined') {
 
 var API_BASE_URL = IS_LOCAL
     ? 'http://127.0.0.1:8000/api'
-    : 'https://web.kiyanibhai.site/api'; 
     : 'https://web.kiyanibhai.site/api';
 
 var PUBLIC_URL = IS_LOCAL
