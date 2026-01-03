@@ -1,5 +1,7 @@
 Project Description: "NexUs is a modern, full-stack social media platform designed for seamless connection and content sharing. It features a robust Authentication system (JWT-based), granular Role-Based Access Control (RBAC), and a dynamic content feed supporting both rich-media Posts and short-form Reels. Users can engage through threaded comments, nested replies, emoji reactions, and real-time notifications. The platform includes a sophisticated Admin Dashboard for content moderation, user management, and site-wide configuration, ensuring a safe and controlled community environment."
+
 Site Link https://web.kiyanibhai.site/
+
 Topics (Features & Modules):
 
 Authentication & Security:
@@ -38,4 +40,5 @@ Upcoming Features (Roadmap):
 
 Direct Messaging (DM): Real-time private chat system between users.
 Stories: 24-hour ephemeral content (status updates) with media support.
+
 
