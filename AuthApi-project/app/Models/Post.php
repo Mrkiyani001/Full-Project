@@ -27,10 +27,6 @@ class Post extends Model
         'moderated_at' => 'datetime',
     ];
 
-    protected function serializeDate(\DateTimeInterface $date)
-    {
-        return $date->format('Y-m-d H:i:s');
-    }
 
     public function user()
     {
