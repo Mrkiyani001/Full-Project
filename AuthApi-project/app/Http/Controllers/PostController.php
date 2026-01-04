@@ -14,6 +14,7 @@ use App\Models\Post;
 use Carbon\Carbon;
 use App\Services\ContentModerationService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 
 class PostController extends BaseController
 {
@@ -48,11 +49,13 @@ class PostController extends BaseController
                 $is_approved = true;
             }
             if(!$user->hasRole(['super admin'])){
-            $daily_post_count = Post::where('user_id', $user->id)->whereDate('created_at', Carbon::today())->count();
-            if($daily_post_count >= 10){
-                return $this->response(false, 'Daily limit reached', null, 429);
+            $key = 'create-post'.$user->id;
+            if(RateLimiter::tooManyAttempts($key,5)){
+                $seconds=RateLimiter::availableIn($key);
+                return $this->response(false,'You have exceeded the limit. Please try again in '.$seconds.' seconds',null,429);
             }
-        }
+            RateLimiter::hit($key,600);
+            }
 
             AddPost::dispatch(
                 $user->id,

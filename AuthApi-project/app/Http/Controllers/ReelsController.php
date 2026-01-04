@@ -10,6 +10,7 @@ use App\Models\Share;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 
 class ReelsController extends BaseController
@@ -51,6 +52,14 @@ class ReelsController extends BaseController
                     'user_id' => $user->id,
                     'thumbnail_path' => $thumbnailPath,
                 ]);
+                $key='create-reel'.$user->id;
+                if(!$user->hasRole(['super admin'])){
+                if(RateLimiter::tooManyAttempts($key,5)){
+                    $seconds=RateLimiter::availableIn($key);
+                    return $this->response(false,'You have exceeded the limit. Please try again in '.$seconds.' seconds',null,429);
+                }
+                RateLimiter::hit($key,600);
+                }
                 AddReel::dispatch($user->id, $request->caption, $reel, $thumbnailPath, $request->privacy);
             } else {
                 return $this->Response(false, 'Video file is required.', null, 422);
