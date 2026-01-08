@@ -120,33 +120,30 @@
         const waitPromise = new Promise(resolve => setTimeout(resolve, 2000));
 
         // Start data fetch (using HttpOnly cookies)
+        // Start data fetch (using HttpOnly cookies)
         const fetchPromise = fetch(`${API_BASE_URL}/get_all_posts`, {
-            method: 'POST',
+            method: 'GET',
             credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
-            },
-            body: JSON.stringify({ limit: 50 })
+            }
         })
             .then(async response => {
                 if (response.status === 401) {
-                    throw new Error('Unauthorized');
+                     console.warn("Pre-fetch 401 (Proceeding to dashboard)");
+                     return null;
                 }
                 return response.json();
             })
             .then(data => {
-                if (data.success) {
+                if (data && data.success) {
                     localStorage.setItem('cached_posts', JSON.stringify(data));
                 }
                 return data;
             })
             .catch(err => {
                 console.error('Pre-fetch failed', err);
-                if (err.message === 'Unauthorized') {
-                    window.location.href = 'login.html';
-                    throw err; // Stop chain
-                }
             });
 
         try {

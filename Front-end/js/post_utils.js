@@ -588,7 +588,10 @@ window.canDeleteContent = (currentUser, owner) => {
     // Dictionary Definition: User Post
     // Delete: Owner (handled top), SA, Admin. (NOT Mod)
     const result = amISuperAdmin || amIAdmin;
-    console.log(`[canDeleteContent] User: ${currentUser.name} (${JSON.stringify(currentUser.roles)}), Target: ${owner.name}, Result: ${result}`);
+    // Safe logging
+    const userName = currentUser ? currentUser.name : 'Unknown';
+    const userRoles = currentUser ? JSON.stringify(currentUser.roles) : '[]';
+    console.log(`[canDeleteContent] User: ${userName} (${userRoles}), Target: ${owner.name}, Result: ${result}`);
     return result;
 };
 

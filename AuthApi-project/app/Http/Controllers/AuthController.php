@@ -92,6 +92,10 @@ class AuthController extends BaseController
                 auth('api')->logout();
                 return $this->Response(false, 'User not verified', null, 401);
             }
+            
+            // Critical: Load roles and profile so frontend has them immediately
+            $user->load('roles', 'profile');
+            
             return $this->Response(true, 'User logged in successfully', $user, 200)->withCookie($this->getAuthCookie($token));
         } catch (\Exception $e) {
             return $this->Response(false, $e->getMessage(), null, 500);
