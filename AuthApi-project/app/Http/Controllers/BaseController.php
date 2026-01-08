@@ -133,19 +133,27 @@ class BaseController extends Controller
         ];
     }
     protected function getAuthCookie($token)
-{
-    return cookie(
-        'jwt_token',
-        $token,
-        60 * 24,
-        null,
-        null,
-        request()->secure(), // <--- Ye automatic check karega (HTTP hai ya HTTPS)
-        true,
-        false,
-        'Lax'
-    );
-}
+    {
+        $isLocal = in_array(request()->getHost(), ['localhost', '127.0.0.1']);
+        
+        // Local (HTTP): Lax + Secure=False (Best for localhost:5500 -> localhost:8000)
+        // Production (HTTPS): Lax + Secure=True
+        
+        $secure = $isLocal ? false : true; 
+        $sameSite = 'Lax';
+
+        return cookie(
+            'jwt_token',
+            $token,
+            60 * 24,
+            null, // Path
+            null, // Domain
+            $secure,
+            true, // HttpOnly
+            false, // Raw
+            $sameSite
+        );
+    }
 protected function getLogoutCookie()
     {
         // Cookie ko "forget" karna asal mein usay expire kar dena hota hai

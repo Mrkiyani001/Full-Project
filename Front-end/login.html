@@ -323,10 +323,12 @@
 
             if (response.ok && data.success) {
                 // HttpOnly Cookie is automatically handled by the browser
-                if (data.user || data.data.user) {
+                // The 'data' field in response contains the User object directly
+                const userObj = data.data || data.user; 
+                
+                if (userObj) {
                     // Still save user_data for UI (Name, Avatar, etc.) - Safe to do
-                    const user = data.user || data.data.user;
-                    localStorage.setItem('user_data', JSON.stringify(user));
+                    localStorage.setItem('user_data', JSON.stringify(userObj));
                 }
 
                 showToast('Login Successful!', 'success');

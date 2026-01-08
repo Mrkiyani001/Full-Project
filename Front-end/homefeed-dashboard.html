@@ -558,8 +558,34 @@
         let postsCacheKey = 'home_posts_cache';
         let selectedFiles = [];
 
+        // Helper to update UI immediately from local data or fresh fetch
+        function updateDashboardUI(user) {
+            if (!user) return;
+            window.currentUserData = user; // Ensure global sync
+
+            const avatarUrl = getAvatarUrl(user);
+            const headerAvatar = document.getElementById('header-user-avatar');
+            if (headerAvatar) headerAvatar.src = avatarUrl;
+            
+            const headerName = document.getElementById('header-user-name');
+            if(headerName) headerName.innerText = user.name;
+            
+            const headerHandle = document.getElementById('header-user-handle');
+            if (headerHandle) headerHandle.innerText = '@' + user.name.toLowerCase().replace(/\s+/g, '');
+
+            // Admin Access Check
+            if (typeof checkAdminButtonVisibility === 'function') {
+                checkAdminButtonVisibility(user);
+            }
+        }
+
         // --- 2. HEADER & UI INITIALIZATION ---
         async function refreshUserProfile() {
+            // OPTIMIZATION: Render immediately from localStorage if available
+            if (window.currentUserData && window.currentUserData.id) {
+                updateDashboardUI(window.currentUserData);
+            }
+
             try {
                 // Using /getUser (without ID) as a safe read-only alternative to /refresh or /me
                 // This fetches current user data without rotating the token (preventing logout loop)
@@ -578,25 +604,12 @@
                 const data = await response.json();
                 if (data.success && data.data) {
                     const user = data.data;
-                    window.currentUserData = user;
                     localStorage.setItem('user_data', JSON.stringify(user));
                     
-                    // Update UI
-                    const avatarUrl = getAvatarUrl(user);
-                    const headerAvatar = document.getElementById('header-user-avatar');
-                    if (headerAvatar) headerAvatar.src = avatarUrl;
+                    // Update UI with fresh data
+                    updateDashboardUI(user);
                     
-                    const headerName = document.getElementById('header-user-name');
-                    if(headerName) headerName.innerText = user.name;
-                    
-                    // Also update handle
-                    const headerHandle = document.getElementById('header-user-handle');
-                    if (headerHandle) headerHandle.innerText = '@' + user.name.toLowerCase().replace(/\s+/g, '');
-                    
-                    // Check Admin Access
-                    if (typeof checkAdminButtonVisibility === 'function') {
-                        checkAdminButtonVisibility(user);
-                    }
+
                     
                 } 
             } catch (e) {
