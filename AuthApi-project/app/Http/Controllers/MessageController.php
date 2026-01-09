@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\DeleteMessageEvent;
 use App\Events\UpdateMessageEvent;
 use App\Http\Resources\ConversationResource;
+use App\Http\Resources\UserResource;
 use App\Jobs\AddMessage;
 use App\Models\Conversation;
 use App\Models\Message;
