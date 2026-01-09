@@ -17,12 +17,16 @@ class AttachAuthToken
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if(!$request->bearerToken() && $request->cookie('jwt_token')){
+        if (!$request->bearerToken() && $request->cookie('jwt_token')) {
             $token = $request->cookie('jwt_token');
-            Log::info('AttachAuthToken: Cookie found', ['token_sub' => substr($token, 0, 10) . '...']);
+            Log::info('AttachAuthToken: Cookie found', [
+                'method' => $request->method(),
+                'url' => $request->url(),
+                'token_sub' => substr($token, 0, 10) . '...'
+            ]);
             $request->headers->set('Authorization', 'Bearer ' . $token);
         } else {
-             Log::info('AttachAuthToken: No cookie or already has token', ['has_cookie' => $request->hasCookie('jwt_token')]);
+            Log::info('AttachAuthToken: No cookie or already has token', ['has_cookie' => $request->hasCookie('jwt_token')]);
         }
         return $next($request);
     }

@@ -7,6 +7,7 @@ use App\Events\UpdateMessageEvent;
 use App\Http\Resources\ConversationResource;
 use App\Http\Resources\UserResource;
 use App\Jobs\AddMessage;
+use App\Models\BlockUser;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
@@ -42,6 +43,13 @@ class MessageController extends BaseController
             }
             $sender_Id = $user->id;
             $receiver_Id = $request->receiver_id;
+            $checkblocked = BlockUser::where([
+                'blocker_id' => $user->id,
+                'blocked_id' => $receiver_Id,
+            ])->exists();
+            if ($checkblocked) {
+                return $this->Response(false, 'You are blocked by this user', null, 403);
+            }
             $exist = User::where('id', $receiver_Id)->exists();
             if (!$exist) {
                 return $this->Response(false, 'Receiver not found', null, 404);
@@ -182,6 +190,7 @@ class MessageController extends BaseController
             'receiver_id' => 'integer|required|exists:users,id',
         ]);
         try {
+
             $user = auth('api')->user();
             if (!$user) {
                 return $this->unauthorized();
@@ -228,14 +237,35 @@ class MessageController extends BaseController
         if (!$user) {
             return $this->unauthorized();
         }
-        $Conversation = Conversation::where('sender_id', $user->id)
-        ->orWhere('receiver_id', $user->id)
-        ->orderBy('updated_at', 'desc')
-        ->paginate($limit);
-        if (!$Conversation) {
-            return $this->Response(false, 'Conversation not found', null, 404);
-        }
-       return $this->Response(true, 'Conversation found', $this->PaginateData($Conversation , ConversationResource::collection($Conversation)));
+        // Create a list of IDs to exclude (users who blocked me OR users I blocked)
+        $blockedUserIds = BlockUser::where('blocker_id', $user->id)
+            ->orWhere('blocked_id', $user->id)
+            ->pluck('blocked_id', 'blocker_id')
+            ->map(function ($blocked, $blocker) use ($user) {
+                return $blocker == $user->id ? $blocked : $blocker;
+            })->unique()->values()->toArray();
+
+        $Conversation = Conversation::where(function ($q) use ($user) {
+                $q->where('sender_id', $user->id)
+                  ->orWhere('receiver_id', $user->id);
+            })
+            // Exclude conversations where the other party is in the blocked list
+            ->where(function ($q) use ($blockedUserIds, $user) {
+               $q->whereNotIn('sender_id', $blockedUserIds)
+                 ->orWhere('sender_id', $user->id);
+            })
+            ->where(function ($q) use ($blockedUserIds, $user) {
+               $q->whereNotIn('receiver_id', $blockedUserIds)
+                 ->orWhere('receiver_id', $user->id);
+            })
+            ->with(['sender.profile.avatar', 'receiver.profile.avatar'])
+            ->orderBy('updated_at', 'desc')
+            ->paginate($limit);
+            if (!$Conversation) {
+                return $this->Response(false, 'Conversation not found', null, 404);
+            }
+
+        return $this->Response(true, 'Conversation found', $this->PaginateData($Conversation , ConversationResource::collection($Conversation)));
        }catch(Exception $e){
         return $this->Response(false, $e->getMessage(), null, 500);
     }
@@ -249,18 +279,30 @@ public function searchUsers(Request $request)
     if (!$user) {
         return $this->unauthorized();
     }
-    $search = $request->search;
-    $users = User::where(function ($q) use ($search){
-        $q->where('name', 'like', '%' . $search . '%');
-    })
-    ->orderBy('name', 'asc')
-    ->select(['id','name','avatar'])
-    ->paginate($limit);
+    $search = $request->search ?? $request->name;
     
-    if (!$users) {
-        return $this->Response(false, 'Users not found', null, 404);
-    }
-   return $this->Response(true, 'Users found', $this->PaginateData($users , UserResource::collection($users)));
+    $users = User::where(function ($q) use ($search){
+         $q->where('name', 'like', '%' . $search . '%');
+    })
+
+    ->where('id', '!=', $user->id) 
+    ->with('profile') 
+    ->orderBy('name', 'asc')
+    ->select('id', 'name')
+    ->paginate($limit);
+
+    // Transform collection to include avatar URL
+    $users->getCollection()->transform(function ($u) {
+        return [
+            'id' => $u->id,
+            'name' => $u->name,
+            'avatar' => $u->avatar_url // Use the accessor from User model
+        ];
+    });
+
+    // The original if (!$users) check is not needed for paginated results as it always returns a Paginator instance.
+    // The original return $this->PaginateData($users , UserResource::collection($users)) is replaced by the transformed collection.
+    return $this->Response(true, 'Users found', $this->PaginateData($users, $users->getCollection()));
    }catch(Exception $e){
     return $this->Response(false, $e->getMessage(), null, 500);
 }

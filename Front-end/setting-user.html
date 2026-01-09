@@ -198,11 +198,13 @@
                     Change Password
                 </h2>
 <form class="flex flex-col gap-6 max-w-lg">
+<!-- Hidden Username for Accessibility -->
+<input type="text" name="username" autocomplete="username" class="hidden" readonly value="user">
 <!-- Current Password -->
 <div class="flex flex-col gap-2">
 <label class="text-sm font-medium text-text-secondary ml-1">Current Password</label>
 <div class="relative group">
-<input class="w-full bg-background-dark/50 border border-surface-highlight text-white text-sm rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder:text-gray-600" placeholder="Enter current password" type="password"/>
+<input class="w-full bg-background-dark/50 border border-surface-highlight text-white text-sm rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder:text-gray-600" autocomplete="current-password" placeholder="Enter current password" type="password"/>
 <button class="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary hover:text-white transition-colors" type="button">
 <span class="material-symbols-outlined text-[20px]">visibility_off</span>
 </button>
@@ -213,8 +215,8 @@
 <div class="flex flex-col gap-2">
 <label class="text-sm font-medium text-text-secondary ml-1">New Password</label>
 <div class="relative group">
-<input class="w-full bg-background-dark/50 border border-surface-highlight text-white text-sm rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder:text-gray-600" placeholder="Min 8 chars, numbers &amp; symbols" type="password"/>
-<button class="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary hover:text-white transition-colors" type="button">
+<input class="w-full bg-background-dark/50 border border-surface-highlight text-white text-sm rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder:text-gray-600" autocomplete="new-password" placeholder="Min 8 chars, numbers &amp; symbols" type="password"/>
+<button class="absolute right-4 top-1/2 -translate-x-1/2 text-text-secondary hover:text-white transition-colors" type="button">
 <span class="material-symbols-outlined text-[20px]">visibility_off</span>
 </button>
 </div>
@@ -231,7 +233,7 @@
 <div class="flex flex-col gap-2">
 <label class="text-sm font-medium text-text-secondary ml-1">Confirm New Password</label>
 <div class="relative group">
-<input class="w-full bg-background-dark/50 border border-surface-highlight text-white text-sm rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder:text-gray-600" placeholder="Re-enter new password" type="password"/>
+<input class="w-full bg-background-dark/50 border border-surface-highlight text-white text-sm rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder:text-gray-600" autocomplete="new-password" placeholder="Re-enter new password" type="password"/>
 <button class="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary hover:text-white transition-colors" type="button">
 <span class="material-symbols-outlined text-[20px]">visibility_off</span>
 </button>
@@ -274,6 +276,16 @@
 <span class="absolute left-1 top-1 bg-text-secondary w-4 h-4 rounded-full transition-transform"></span>
 </button>
 </div>
+                        <div class="h-px bg-surface-highlight/30 w-full"></div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex flex-col">
+                                <p class="text-sm font-medium text-white">Blocked Accounts</p>
+                                <p class="text-xs text-text-secondary">Manage users you have blocked</p>
+                            </div>
+                            <button onclick="openBlockedUsersModal()" class="px-3 py-1.5 rounded-lg bg-surface-highlight hover:bg-surface-highlight/80 text-white text-xs font-bold transition-colors">
+                                View
+                            </button>
+                        </div>
 </div>
 </section>
 <!-- Notification Quick Access -->
@@ -371,6 +383,37 @@
 
 
 
+
+    <!-- Blocked Users Modal -->
+    <div id="blocked-users-modal" class="fixed inset-0 z-[60] hidden">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity opacity-0" id="blocked-users-backdrop" onclick="closeBlockedUsersModal()"></div>
+        
+        <!-- Modal Content -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-6 bg-[#1e2532] border border-surface-border rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-300" id="blocked-users-content">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="material-symbols-outlined text-red-500">block</span>
+                    Blocked Accounts
+                </h3>
+                <button onclick="closeBlockedUsersModal()" class="text-gray-400 hover:text-white transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <div id="blocked-users-list" class="flex flex-col gap-4 max-h-[60vh] overflow-y-auto pr-2">
+                <!-- Loading State -->
+                <div class="flex items-center justify-center py-8 text-slate-400">
+                    <span class="material-symbols-outlined animate-spin mr-2">progress_activity</span> Loading...
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button onclick="closeBlockedUsersModal()" class="px-4 py-2 bg-surface-highlight text-white rounded-xl hover:bg-surface-highlight/80 transition-colors text-sm font-medium">Close</button>
+            </div>
+        </div>
+    </div>
+    
     <script src="js/config.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/post_utils.js"></script>

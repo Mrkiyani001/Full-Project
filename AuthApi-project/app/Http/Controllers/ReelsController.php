@@ -7,6 +7,7 @@ use App\Jobs\DeleteReel;
 use App\Models\Reaction;
 use App\Models\Reel;
 use App\Models\Share;
+use App\Models\BlockUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -186,8 +187,15 @@ class ReelsController extends BaseController
             if (!$user) {
                 return $this->unauthorized();
             }
+
+             // Exclude filtered users (blocked by me OR blocked me)
+             $blockedByMe = BlockUser::where('blocker_id', $user->id)->pluck('blocked_id')->toArray();
+             $blockedMe = BlockUser::where('blocked_id', $user->id)->pluck('blocker_id')->toArray();
+             $excludedUserIds = array_unique(array_merge($blockedByMe, $blockedMe));
+
             // For You: Random order to discover new content
             $reels = Reel::with('user.profile.avatar')
+                ->whereNotIn('user_id', $excludedUserIds)
                 ->withCount(['comments', 'reactions'])
                 ->inRandomOrder()
                 ->get();

@@ -25,25 +25,44 @@ class PermissionSeeder extends Seeder
             'posts reject',
             'flagged post',
             'dismiss flagged post',
-            
+
             'comments create',
             'comments update',
             'comments delete',
-            
+
             'replies create',
             'replies update',
             'replies delete',
             'react on post',
             'react on comment',
             'react on reply',
-            
+
             'reports view',
             'reports resolve',
             'create email template',
             'update email template',
             'delete email template',
             'view access page',
-            'manage access'
+            'view access page',
+            'manage access',
+
+            // Reel Permissions
+            'create reel',
+            'update reel',
+            'delete reel',
+            'get reel',
+
+            'update message',
+            'delete message',
+            'get message',
+            'send message',
+            'get conversation',
+            'search users',
+
+            //Block User
+            'block user',
+            'unblock user',
+            'get blocked users',
         ];
 
         foreach ($all_permissions as $permission) {

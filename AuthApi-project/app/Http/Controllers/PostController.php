@@ -8,6 +8,7 @@ use App\Jobs\DeletePost;
 use App\Jobs\SendNotification;
 use App\Jobs\UpdatePost;
 use App\Models\Attachments;
+use App\Models\BlockUser;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use App\Models\Post;
@@ -245,7 +246,14 @@ class PostController extends BaseController
             if (!$user) {
                 return $this->unauthorized();
             }
-            $posts = Post::with([
+
+            // Exclude filtered users (blocked by me OR blocked me)
+            $blockedByMe = BlockUser::where('blocker_id', $user->id)->pluck('blocked_id')->toArray();
+            $blockedMe = BlockUser::where('blocked_id', $user->id)->pluck('blocker_id')->toArray();
+            $excludedUserIds = array_unique(array_merge($blockedByMe, $blockedMe));
+
+            $posts = Post::whereNotIn('user_id', $excludedUserIds)
+                ->with([
                 'attachments',
                 'creator.profile',
                 'updator',

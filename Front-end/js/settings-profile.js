@@ -401,3 +401,126 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize
     loadSettings();
 });
+
+// --- Blocked Users Modal Logic ---
+
+function openBlockedUsersModal() {
+    const modal = document.getElementById('blocked-users-modal');
+    const backdrop = document.getElementById('blocked-users-backdrop');
+    const content = document.getElementById('blocked-users-content');
+
+    if (modal) {
+        modal.classList.remove('hidden');
+        // Animate in
+        setTimeout(() => {
+            backdrop.classList.remove('opacity-0');
+            content.classList.remove('opacity-0', 'scale-95');
+            content.classList.add('scale-100');
+        }, 10);
+
+        // Fetch list
+        fetchBlockedUsers();
+    }
+}
+
+function closeBlockedUsersModal() {
+    const modal = document.getElementById('blocked-users-modal');
+    const backdrop = document.getElementById('blocked-users-backdrop');
+    const content = document.getElementById('blocked-users-content');
+
+    if (modal) {
+        backdrop.classList.add('opacity-0');
+        content.classList.remove('scale-100');
+        content.classList.add('opacity-0', 'scale-95');
+
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300);
+    }
+}
+
+async function fetchBlockedUsers() {
+    const listContainer = document.getElementById('blocked-users-list');
+    listContainer.innerHTML = `
+        <div class="flex items-center justify-center py-8 text-slate-400">
+            <span class="material-symbols-outlined animate-spin mr-2">progress_activity</span> Loading...
+        </div>`;
+
+    const apiBaseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://127.0.0.1:8000/api';
+
+    try {
+        const response = await fetch(`${apiBaseUrl}/get_blocked_users`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        const data = await response.json();
+
+        if (data.success && data.data.length > 0) {
+            listContainer.innerHTML = '';
+            data.data.forEach(blockRecord => {
+                const user = blockRecord.blocked;
+                if (!user) return;
+
+                const avatar = getProfilePicture(user);
+
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between p-3 bg-background-dark/50 rounded-xl border border-white/5 hover:border-white/10 transition-colors';
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <img src="${avatar}" class="w-10 h-10 rounded-full object-cover bg-slate-700">
+                        <div class="flex flex-col">
+                            <span class="text-sm font-bold text-white">${user.name}</span>
+                        </div>
+                    </div>
+                    <button onclick="unblockUser(${user.id})" class="px-3 py-1.5 text-xs font-bold text-red-400 bg-red-400/10 hover:bg-red-400 hover:text-white rounded-lg transition-colors border border-red-400/20">
+                        Unblock
+                    </button>
+                `;
+                listContainer.appendChild(item);
+            });
+        } else {
+            listContainer.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-8 text-slate-500">
+                    <span class="material-symbols-outlined text-[32px] mb-2 opacity-50">block</span> 
+                    <p>No blocked users found</p>
+                </div>`;
+        }
+
+    } catch (e) {
+        console.error(e);
+        listContainer.innerHTML = `<p class="text-red-400 text-center py-4">Failed to load blocked users</p>`;
+    }
+}
+
+async function unblockUser(userId) {
+    if (!confirm("Are you sure you want to unblock this user?")) return;
+
+    const apiBaseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://127.0.0.1:8000/api';
+
+    try {
+        const formData = new FormData();
+        formData.append('user_id', userId);
+
+        const response = await fetch(`${apiBaseUrl}/unblock_user`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json'
+            },
+            body: formData
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showToast('User unblocked', 'success');
+            fetchBlockedUsers(); // Refresh list
+        } else {
+            showToast(data.message || 'Unblock failed', 'error');
+        }
+    } catch (e) {
+        showToast('Error unblocking user', 'error');
+    }
+}

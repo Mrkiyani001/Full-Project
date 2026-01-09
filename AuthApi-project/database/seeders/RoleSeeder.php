@@ -27,7 +27,18 @@ class RoleSeeder extends Seeder
             'comments delete',
             'replies create',
             'replies update',
-            'replies delete'
+            'replies delete',
+            
+            // Reel Permissions
+            'create reel',
+            'update reel',
+            'delete reel',
+            'get reel',
+            
+            // Block Permissions
+            'block user',
+            'unblock user',
+            'get blocked users'
            ];
         
         $role = Role::firstOrCreate(['name' => 'super admin', 'guard_name' => 'api']);

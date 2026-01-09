@@ -8,6 +8,7 @@ use Exception;
 use Illuminate\Http\Request;
 use App\Models\Attachments; // Add this import
 use App\Jobs\SendNotification;
+use App\Models\BlockUser;
 
 class ProfileController extends BaseController
 {
@@ -51,6 +52,10 @@ class ProfileController extends BaseController
             if ($user->is_banned == 1) {
                 return $this->Response(false, 'User is banned', null, 401);
             }
+            if ($blockError = $this->checkBlockStatus($user, $request->id)) {
+                return $this->Response(false, $blockError, null, 400);
+            }
+           
             // Email Visibility Logic
             if ($loggedInUser && $userId !== $loggedInUser->id && $user->show_email == false) {
                 $user->makeHidden(['email']);
@@ -228,6 +233,10 @@ class ProfileController extends BaseController
             if ($user->id == $request->user_id) {
                 return $this->Response(false, 'You cannot follow yourself', null, 400);
             }
+            if ($blockError = $this->checkBlockStatus($user, $request->user_id)) {
+                return $this->Response(false, $blockError, null, 400);
+            }
+            
             $targetUser = User::find($request->user_id);
             if(!$targetUser->allow_friend_request){
                  return $this->Response(false, 'This user does not accept friend requests', null, 403);
@@ -280,6 +289,9 @@ class ProfileController extends BaseController
             if ($user->id == $request->user_id) {
                 return $this->Response(false, 'You cannot follow yourself', null, 400);
             }
+            if ($blockError = $this->checkBlockStatus($user, $request->user_id)) {
+                return $this->Response(false, $blockError, null, 400);
+            }
             // Check if the user is actually in the followers list (i.e. has sent a request)
             if (!$user->followers()->where('users.id', $request->user_id)->exists()) {
                 return $this->Response(false, 'This user has not requested to follow you', null, 400);
@@ -317,6 +329,9 @@ class ProfileController extends BaseController
             if ($user->id == $request->user_id) {
                 return $this->Response(false, 'You cannot follow yourself', null, 400);
             }
+            if ($blockError = $this->checkBlockStatus($user, $request->user_id)) {
+                return $this->Response(false, $blockError, null, 400);
+            }
             if (!$user->followers()->where('users.id', $request->user_id)->exists()) {
                 return $this->Response(false, 'This user has not requested to follow you', null, 400);
             }
@@ -347,6 +362,7 @@ class ProfileController extends BaseController
             if (!$user->following()->where('following_id', $request->user_id)->exists()) {
                 return $this->Response(false, 'You are not following this user', null, 400);
             }
+            
             $user->unfollow($request->user_id);
             return $this->Response(true, 'User unfollowed successfully', null);
         } catch (Exception $e) {
@@ -510,5 +526,15 @@ class ProfileController extends BaseController
         } catch (Exception $e) {
             return $this->Response(false, $e->getMessage(), null, 500);
         }
+    }
+    private function checkBlockStatus($user, $targetId)
+    {
+        if (BlockUser::where('blocker_id', $user->id)->where('blocked_id', $targetId)->exists()) {
+            return 'User is blocked by you';
+        }
+        if (BlockUser::where('blocker_id', $targetId)->where('blocked_id', $user->id)->exists()) {
+            return 'User blocked you';
+        }
+        return null;
     }
 }

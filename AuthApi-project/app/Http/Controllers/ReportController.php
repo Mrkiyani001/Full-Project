@@ -6,7 +6,9 @@ use App\Models\CommentReply;
 use App\Models\Post;
 use App\Models\Report;
 use App\Models\Comments;
+use App\Models\Message;
 use App\Models\Reel;
+use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 
@@ -15,7 +17,7 @@ class ReportController extends BaseController
     public function createReport(Request $request)
     {
         $this->validateRequest($request, [
-            'reportable_type' => 'required|string|in:post,comment,reply,reels', // Fixed validation syntax
+            'reportable_type' => 'required|string|in:post,comment,reply,reels,messages,user', // Fixed validation syntax
             'reportable_id' => 'required|integer',
             'reason' => 'required|string|max:255',
         ]);
@@ -39,6 +41,12 @@ class ReportController extends BaseController
                     break;
                 case 'reels':
                     $modelcase = Reel::class;
+                    break;
+                case 'messages':
+                    $modelcase = Message::class;
+                    break;
+                case 'user':
+                    $modelcase = User::class;
                     break;
             }
 
@@ -78,7 +86,9 @@ class ReportController extends BaseController
                     $query->morphWith([
                         Post::class => ['user.profile'],
                         Comments::class => ['user.profile'],
-                        CommentReply::class => ['creator.profile']
+                        CommentReply::class => ['creator.profile'],
+                        Message::class => ['user.profile'],
+                        User::class => ['profile']
                     ]);
                 }
             ])

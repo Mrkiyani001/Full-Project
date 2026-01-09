@@ -1,20 +1,15 @@
 <!DOCTYPE html>
-<html class="dark" lang="en">
 
-<head>
-    <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Messages</title>
-    <link href="https://fonts.googleapis.com" rel="preconnect" />
-    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&amp;display=swap"
-        rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script id="tailwind-config">
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NexUs Messages</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
             theme: {
@@ -22,90 +17,70 @@
                     colors: {
                         "primary": "#215bed",
                         "background-light": "#f6f6f8",
-                        "background-dark": "#111318",
-                        "card-dark": "#1c1f27",
-                        "card-glass": "rgba(28, 31, 39, 0.7)",
-                        "secondary-text": "#9da5b9",
+                        "background-dark": "#101522",
+                        "surface-dark": "#18181b",
                         "surface-border": "#282d39",
                     },
                     fontFamily: {
-                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                        "display": ["Spline Sans", "sans-serif"]
                     },
-                    borderRadius: {
-                        "DEFAULT": "0.5rem",
-                        "lg": "1rem",
-                        "xl": "1.5rem",
-                        "2xl": "2rem",
-                        "full": "9999px"
-                    },
+                    borderRadius: { "DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px" },
                 },
             },
         }
     </script>
-    <style>
-        ::-webkit-scrollbar {
-            width: 8px;
+<style>
+        .glass-nav {
+            background: rgba(15, 17, 26, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
 
+        .glass-nav-mobile {
+            background: rgba(15, 17, 26, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        /* Custom scrollbar for Webkit browsers */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
         ::-webkit-scrollbar-track {
             background: transparent;
         }
-
         ::-webkit-scrollbar-thumb {
             background: #282d39;
-            border-radius: 4px;
+            border-radius: 3px;
         }
-
         ::-webkit-scrollbar-thumb:hover {
-            background: #3e4556;
-        }
-
-        .glass-nav {
-            background: rgba(17, 19, 24, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        /* Hide scrollbar for Chrome, Safari and Opera */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-
-        /* Hide scrollbar for IE, Edge and Firefox */
-        .no-scrollbar {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
+            background: #3f4656;
         }
     </style>
 </head>
-
-<body
-    class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white min-h-screen flex flex-col overflow-hidden selection:bg-primary/30">
-    
-    <!-- Header -->
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white overflow-hidden h-screen flex flex-col">
+<!-- Top Navigation -->
     <header
-        class="glass-nav fixed top-0 w-full z-50 h-[70px] md:h-[80px] flex items-center justify-between px-4 md:px-8 transition-all duration-300">
-        <div class="flex items-center gap-3 cursor-pointer group select-none min-w-fit"
-            onclick="window.location.href='homefeed-dashboard.html'">
+        class="glass-nav w-full z-50 h-[70px] md:h-[80px] flex items-center justify-between px-4 md:px-8 transition-all duration-300 shrink-0 relative">
+        <div class="flex items-center gap-3 cursor-pointer group select-none min-w-fit" onclick="window.location.href='homefeed-dashboard.html'">
             <div id="site-logo-img"
-                class="w-9 h-9 md:w-10 md:h-10 rounded-xl flex items-center justify-center group-hover:scale-105 transition-all duration-300 bg-cover bg-center bg-no-repeat overflow-hidden">
-                <span class="material-symbols-outlined text-[22px] md:text-[26px] text-primary">token</span>
+                class="w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center group-hover:scale-105 transition-all duration-300 bg-cover bg-center bg-no-repeat overflow-hidden">
+                <!-- Fallback icon if bg image fails to load or script hasn't run yet -->
+                <span class="material-symbols-outlined text-[22px] md:text-[26px] text-white/80">token</span>
             </div>
             <div class="flex flex-col">
                 <span id="site-logo-text"
-                    class="text-lg md:text-xl font-bold tracking-tight text-white leading-none"></span>
-                <span
-                    class="text-[9px] md:text-[10px] font-semibold text-slate-500 uppercase tracking-widest leading-none mt-1 hidden sm:block">Messages</span>
+                    class="text-xl md:text-2xl font-bold tracking-tight text-white leading-none ml-2"></span>
             </div>
         </div>
-
         <nav class="hidden md:flex items-center gap-1 lg:gap-2 absolute left-1/2 -translate-x-1/2 z-10">
             <a class="flex items-center gap-2 px-3 lg:px-4 py-2.5 rounded-full text-slate-400 hover:text-white hover:bg-white/5 transition-all group"
                 href="homefeed-dashboard.html">
-                <span
-                    class="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">home</span>
-                <span class="hidden lg:block font-medium">Home</span>
+                <span class="material-symbols-outlined text-[24px]"
+                    style="font-variation-settings: 'FILL' 1;">home</span>
+                <span class="hidden lg:inline">Home</span>
             </a>
             <a class="flex items-center gap-2 px-3 lg:px-4 py-2.5 rounded-full text-slate-400 hover:text-white hover:bg-white/5 transition-all group"
                 href="reels.html">
@@ -113,7 +88,7 @@
                     class="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">movie</span>
                 <span class="hidden lg:block font-medium">Reels</span>
             </a>
-            <a class="flex items-center gap-2 px-3 lg:px-4 py-2.5 rounded-full text-slate-400 hover:text-white hover:bg-white/5 transition-all group"
+            <a class="flex items-center gap-2 px-3 lg:px-4 py-2.5 rounded-full text-slate-400 hover:text-white hover:bg-white/5 transition-all group relative"
                 href="notification.html">
                 <div class="relative">
                     <span
@@ -126,37 +101,34 @@
             <a class="relative flex items-center gap-2 px-4 lg:px-6 py-2.5 rounded-full bg-gradient-to-r from-primary/10 to-blue-600/10 border border-primary/20 text-primary font-semibold transition-all group shadow-[0_0_15px_rgba(59,130,246,0.15)]"
                 href="message.html">
                 <span
-                    class="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform text-primary" style="font-variation-settings: 'FILL' 1;">mail</span>
+                    class="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">mail</span>
                 <span class="hidden lg:block font-medium">Messages</span>
             </a>
         </nav>
-
         <div class="flex items-center gap-2 md:gap-4 justify-end flex-1 md:flex-initial min-w-0">
-            <!-- Search Bar -->
+             <!-- Search Bar (Mobile Hidden by default logic handled by CSS classes) -->
             <div
                 class="relative group hidden sm:block w-32 md:w-36 lg:w-48 transition-all focus-within:w-48 md:focus-within:w-52 lg:focus-within:w-64 shrink">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <span
                         class="material-symbols-outlined text-slate-500 text-[20px] group-focus-within:text-primary transition-colors">search</span>
                 </div>
-                <input id="global-search-input"
-                    class="bg-white/5 border-transparent focus:bg-white/10 focus:border-primary/50 block w-full pl-10 pr-3 py-2 rounded-full text-xs md:text-sm font-medium focus:outline-none transition-all"
-                    placeholder="Search..." type="text">
+                <div id="global-search-input"
+                    class="bg-white/5 border-transparent focus:bg-white/10 focus:border-primary/50 block w-full pl-10 pr-3 py-2 rounded-full text-xs md:text-sm font-medium focus:outline-none transition-all cursor-text text-slate-400"
+                    onclick="window.location.href='homefeed-dashboard.html#search'">Search...</div>
             </div>
 
             <button
-                class="sm:hidden w-9 h-9 rounded-full hover:bg-white/5 flex items-center justify-center text-slate-300 transition-colors">
+                class="sm:hidden w-9 h-9 rounded-full hover:bg-white/5 flex items-center justify-center text-slate-300" onclick="window.location.href='homefeed-dashboard.html#search'">
                 <span class="material-symbols-outlined text-[20px]">search</span>
             </button>
-            <div class="w-px h-8 bg-white/10 mx-1 hidden md:block"></div>
 
-             <a href="notification.html" class="md:hidden relative group p-2 text-slate-400">
+            <a href="notification.html" class="md:hidden relative group p-2 text-slate-400">
                 <span class="material-symbols-outlined text-[24px]">notifications</span>
                 <span id="notif-badge-mobile-header"
                     class="hidden absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border border-background-dark animate-pulse"></span>
             </a>
 
-            <!-- Logout button removed -->
             <div class="w-px h-8 bg-white/10 mx-1 hidden md:block"></div>
 
             <div class="relative group/profile shrink-0">
@@ -183,20 +155,20 @@
 
                 <!-- Dropdown Menu -->
                 <div id="profile-dropdown"
-                    class="hidden absolute top-full right-0 mt-3 w-48 bg-card-dark border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-fade-in">
+                    class="hidden absolute top-full right-0 mt-3 w-48 bg-[#161b27] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] animate-fade-in ring-1 ring-white/5">
                     <a href="profile.html"
                         class="block px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2">
                         <span class="material-symbols-outlined text-[18px]">person</span>
                         View Profile
                     </a>
                     <div class="h-px bg-white/5 my-1"></div>
-                    <a href="setting-user.html"
+                    <a href="setting-user.html" id="settings-link-dropdown"
                         class="block px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2">
                         <span class="material-symbols-outlined text-[18px]">settings</span>
                         Settings
                     </a>
                     <div class="h-px bg-white/5 my-1"></div>
-                    <button
+                    <button id="logout-btn-dropdown"
                         onclick="localStorage.removeItem('auth_token'); localStorage.removeItem('user_data'); window.location.href='login.html'"
                         class="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors flex items-center gap-2">
                         <span class="material-symbols-outlined text-[18px]">logout</span>
@@ -206,123 +178,301 @@
             </div>
         </div>
     </header>
+<!-- Main Content Layout -->
+<div class="flex flex-1 overflow-hidden relative" id="layout-container">
+<!-- Left Sidebar: Chat List -->
+<aside class="w-full md:w-[380px] lg:w-[420px] flex flex-col border-r border-surface-border bg-[#111318] z-10 shrink-0" id="conversations-sidebar">
+<!-- Sidebar Header -->
+<div class="p-5 flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<h1 class="text-white text-xl font-bold leading-tight">Chats</h1>
+<span class="bg-primary/20 text-primary text-xs font-bold px-2 py-0.5 rounded-full" id="total-unread-count">0</span>
+</div>
+<button class="flex items-center justify-center w-9 h-9 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20" onclick="startNewChat()">
+<span class="material-symbols-outlined text-[20px]">edit_square</span>
+</button>
+</div>
+<!-- Chat Search -->
+<div class="relative">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#9da5b9]">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input id="chat-search-input" class="block w-full pl-10 pr-3 py-2.5 border-none rounded-xl leading-5 bg-surface-border text-white placeholder-[#9da5b9] focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm" placeholder="Search conversations..." type="text"/>
+</div>
+<!-- Quick Filters -->
+<div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar hidden">
+<button class="px-4 py-1.5 rounded-full bg-white text-black text-sm font-semibold whitespace-nowrap">Inbox</button>
+<button class="px-4 py-1.5 rounded-full bg-surface-border text-[#9da5b9] hover:text-white hover:bg-[#3f4656] transition-colors text-sm font-medium whitespace-nowrap">Unread</button>
+<button class="px-4 py-1.5 rounded-full bg-surface-border text-[#9da5b9] hover:text-white hover:bg-[#3f4656] transition-colors text-sm font-medium whitespace-nowrap">Groups</button>
+<button class="px-4 py-1.5 rounded-full bg-surface-border text-[#9da5b9] hover:text-white hover:bg-[#3f4656] transition-colors text-sm font-medium whitespace-nowrap">Requests</button>
+</div>
+</div>
+<!-- Conversation List -->
+<div class="flex-1 overflow-y-auto" id="conversations-list">
+    <!-- Loaded via JS -->
+    <div class="p-8 text-center text-slate-500">Loading chats...</div>
+</div>
+</aside>
 
-    <!-- Main Content Layout -->
-    <main class="flex-1 flex flex-col items-center justify-center relative pt-[70px] md:pt-[80px] pb-[65px] lg:pb-0 h-screen bg-background-light dark:bg-background-dark overflow-hidden">
-        <!-- Background Elements -->
-        <div class="absolute inset-0 overflow-hidden pointer-events-none">
-            <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse-slow"></div>
-            <div class="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl animate-pulse-slow" style="animation-delay: 1.5s;"></div>
+<!-- Right Panel: Active Conversation -->
+<main class="hidden md:flex flex-1 flex-col bg-background-dark relative" id="chat-area">
+    <!-- Default Empty State -->
+    <div id="empty-state" class="flex-1 flex flex-col items-center justify-center text-center p-8">
+        <div class="w-24 h-24 bg-surface-border rounded-full flex items-center justify-center mb-6">
+            <span class="material-symbols-outlined text-4xl text-slate-400">chat_bubble_outline</span>
         </div>
+        <h2 class="text-2xl font-bold text-white mb-2">Your Messages</h2>
+        <p class="text-slate-400 max-w-sm">Send messages and media to your friend with full Encryption.</p>
+        <button onclick="startNewChat()" class="mt-6 px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors">
+            Send Message
+        </button>
+    </div>
 
-        <div class="relative z-10 flex flex-col items-center text-center px-6 max-w-lg">
-           <div class="relative mb-8">
-                <div class="absolute inset-0 bg-primary/20 blur-xl rounded-full"></div>
-                <div class="relative bg-card-dark border border-white/10 p-6 rounded-2xl shadow-xl transform rotate-3 hover:rotate-0 transition-transform duration-500">
-                    <span class="material-symbols-outlined text-6xl text-primary animate-bounce">engineering</span>
+    <!-- Active Chat Content (Hidden by default) -->
+    <div id="active-chat-content" class="flex flex-col h-full hidden">
+        <!-- Chat Header -->
+        <div class="h-[76px] flex items-center justify-between px-6 border-b border-surface-border bg-background-dark/80 backdrop-blur-md sticky top-0 z-10">
+            <div class="flex items-center gap-4">
+                <button class="md:hidden text-slate-400 hover:text-white mr-1" onclick="backToConversations()">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <div class="relative cursor-pointer" onclick="viewProfile(activeChatUser.id)">
+                    <div id="chat-header-avatar" class="bg-center bg-no-repeat bg-cover rounded-full h-10 w-10 bg-slate-700"></div>
+                    <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-background-dark rounded-full hidden" id="chat-header-status"></span>
                 </div>
-           </div>
-           
-           <h1 class="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">
-               Coming <span class="text-primary">Soon</span>
-           </h1>
-           
-           <p class="text-lg text-secondary-text mb-8 leading-relaxed">
-               We're crafting an awesome messaging experience for you. Specifically built for secure and seamless conversations. Stay tuned!
-           </p>
-
-           <div class="flex gap-4">
-               <a href="homefeed-dashboard.html" class="px-8 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/30 hover:bg-primary/90 hover:scale-105 transition-all flex items-center gap-2">
-                   <span class="material-symbols-outlined">arrow_back</span>
-                   Back to Home
-               </a>
-           </div>
-        </div>
-    </main>
-
-    <!-- Mobile Bottom Navigation -->
-    <nav
-        class="fixed bottom-0 left-0 z-40 flex w-full items-end justify-between border-t border-slate-200 bg-white px-4 pb-3 pt-2 dark:border-slate-800 dark:bg-background-dark/95 backdrop-blur-lg lg:hidden">
-        
-        <!-- 1. Home -->
-        <a href="homefeed-dashboard.html" class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-500 dark:text-slate-400">
-            <span class="material-symbols-outlined text-[26px]">home</span>
-            <span class="text-[10px] font-medium">Home</span>
-        </a>
-
-        <!-- 2. Reels -->
-        <a href="reels.html" class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-500 dark:text-slate-400">
-            <span class="material-symbols-outlined text-[26px]">movie</span>
-            <span class="text-[10px] font-medium">Reels</span>
-        </a>
-
-        <!-- Friends -->
-        <a href="friendreq.html" class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-500 dark:text-slate-400 relative">
-            <div class="relative">
-                <span class="material-symbols-outlined text-[26px]">group</span>
-                <span id="mobile-nav-requests-badge" class="hidden absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#0f111a]"></span>
+                <div class="flex flex-col cursor-pointer" onclick="viewProfile(activeChatUser.id)">
+                    <div class="flex items-center gap-2">
+                        <h2 id="chat-header-name" class="text-white text-base font-bold leading-tight">User</h2>
+                    </div>
+                </div>
             </div>
-            <span class="text-[10px] font-medium">Friends</span>
-        </a>
+            <div class="flex items-center gap-2 z-50">
+                <div class="relative">
+                    <button id="chat-actions-btn" onclick="toggleChatActions()" class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-border text-[#9da5b9] hover:text-white transition-colors">
+                        <span class="material-symbols-outlined text-[24px]">more_vert</span>
+                    </button>
+                    <!-- Dropdown Menu -->
+                    <div id="chat-actions-menu" class="hidden absolute right-0 top-12 w-48 bg-[#1e2532] border border-surface-border rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                        <button onclick="reportChat()" class="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+                            <span class="material-symbols-outlined text-[20px]">flag</span> Report
+                        </button>
+                        <div class="h-px bg-white/5 mx-2"></div>
+                        <button onclick="deleteChat()" class="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-3 transition-colors">
+                            <span class="material-symbols-outlined text-[20px]">delete</span> Delete Chat
+                        </button>
+                        <button onclick="blockUser()" class="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-3 transition-colors">
+                            <span class="material-symbols-outlined text-[20px]">block</span> Block User
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        <!-- 4. Messages (Active) -->
-        <a href="message.html" class="flex flex-1 flex-col items-center justify-end gap-1 text-primary relative">
-             <span class="material-symbols-outlined text-[26px]" style="font-variation-settings: 'FILL' 1;">mail</span>
-             <span class="text-[10px] font-medium">Messages</span>
-        </a>
+        <!-- Messages Area -->
+        <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-4" id="messages-container">
+            <!-- Messages will be inserted here -->
+        </div>
 
-        <!-- 5. Profile -->
-        <a href="profile.html" class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-500 dark:text-slate-400">
-            <span class="material-symbols-outlined text-[26px]">person</span>
-            <span class="text-[10px] font-medium">Profile</span>
-        </a>
-    </nav>
-
-    <script src="js/config.js"></script>
-    <script src="js/utils.js"></script>
-    <script>
-        // Basic Auth Check
-        const token = localStorage.getItem('auth_token');
-        // if (!token) window.location.href = 'login.html';
-        const currentUserData = JSON.parse(localStorage.getItem('user_data') || '{}');
-    </script>
-    <script src="js/post_utils.js"></script>
-    <script src="js/notifications.js"></script>
-    <script src="js/site_branding.js"></script>
-    <script>
-        // Header User Info Init
-        if (currentUserData.name) {
-            const headerName = document.getElementById('header-user-name');
-            const headerHandle = document.getElementById('header-user-handle');
-            if (headerName) headerName.innerText = currentUserData.name;
-            if (headerHandle) headerHandle.innerText = '@' + currentUserData.name.toLowerCase().replace(/\s+/g, '');
+        <!-- Input Area -->
+        <div class="p-6 pt-2 bg-background-dark relative">
+            <div class="absolute -top-12 left-0 w-full h-12 bg-gradient-to-t from-background-dark to-transparent pointer-events-none"></div>
             
-            const avatarUrl = getAvatarUrl(currentUserData);
-            const headerAvatar = document.getElementById('header-user-avatar');
-            if (headerAvatar) {
-                headerAvatar.src = avatarUrl;
-                headerAvatar.onerror = function() {
-                     this.onerror = null;
-                     this.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserData.name)}&background=random`;
+            <!-- File Preview Area -->
+             <div id="file-preview-area" class="hidden flex gap-2 overflow-x-auto mb-2 p-2"></div>
+
+            <form id="message-form" class="flex items-end gap-3 bg-surface-border rounded-2xl p-2 pr-2 shadow-lg ring-1 ring-white/5">
+                <input type="file" id="file-input" multiple class="hidden" accept="image/*,video/*,application/pdf">
+                <button type="button" onclick="document.getElementById('file-input').click()" class="p-2.5 text-[#9da5b9] hover:text-primary transition-colors rounded-xl hover:bg-[#3f4656]" title="Attach file">
+                    <span class="material-symbols-outlined text-[24px]">add_circle</span>
+                </button>
+                <div class="flex-1 py-2.5">
+                    <textarea id="message-input" class="w-full bg-transparent border-none text-white placeholder-[#9da5b9] focus:ring-0 resize-none max-h-32 text-sm leading-relaxed" placeholder="Type a message..." rows="1" style="height: 44px;"></textarea>
+                </div>
+                <button type="submit" class="p-2.5 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors shadow-lg shadow-primary/30 group disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined text-[20px] group-hover:translate-x-0.5 transition-transform">send</span>
+                </button>
+            </form>
+        </div>
+    </div>
+</main>
+</div>
+
+<!-- User Selection Modal (For New Chat) -->
+<div id="user-selection-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeUserSelectionModal()"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-[#1c1f27] border border-surface-border rounded-2xl shadow-2xl overflow-hidden animate-fade-in">
+        <div class="p-4 border-b border-surface-border flex items-center justify-between">
+            <h3 class="text-white font-bold text-lg">New Message</h3>
+            <button onclick="closeUserSelectionModal()" class="text-slate-400 hover:text-white">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-4">
+            <div class="relative mb-4">
+                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 material-symbols-outlined">search</span>
+                 <input type="text" id="user-search-input" class="w-full bg-surface-border border-none rounded-xl pl-10 py-3 text-white placeholder-slate-500 focus:ring-1 focus:ring-primary" placeholder="Search people...">
+            </div>
+            <div id="user-list-container" class="max-h-80 overflow-y-auto flex flex-col gap-2">
+                <!-- Users loaded here -->
+                <div class="text-center text-slate-500 py-4">Search for users above</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/site_branding.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/post_utils.js"></script>
+<script>
+    // Auth & User State
+    let currentUserData = JSON.parse(localStorage.getItem('user_data') || 'null');
+
+    async function initPage() {
+        // If no local user data, try to fetch it from API (using Cookies)
+        if (!currentUserData) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/getUser`, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success || result.data) {
+                        currentUserData = result.data || result;
+                        localStorage.setItem('user_data', JSON.stringify(currentUserData));
+                        console.log('User hydrated from Cookie:', currentUserData.name);
+                    } else {
+                        throw new Error('Invalid user data');
+                    }
+                } else {
+                    // Cookie invalid or expired
+                    console.warn('Auth check failed. Redirecting to login.');
+                    window.location.href = 'login.html';
+                    return;
+                }
+            } catch (e) {
+                console.error('Auth Init Error:', e);
+                window.location.href = 'login.html';
+                return;
+            }
+        }
+
+        // Initialize UI with User Data
+        initAvatar();
+    }
+
+    function initAvatar() {
+        if (!currentUserData) return;
+        
+        const avatarUrl = getAvatarUrl(currentUserData);
+        
+        // New Header Elements
+        const headerAvatar = document.getElementById('header-user-avatar');
+        if (headerAvatar) headerAvatar.src = avatarUrl;
+        
+        const headerName = document.getElementById('header-user-name');
+        if (headerName) headerName.innerText = currentUserData.name;
+        
+        const headerHandle = document.getElementById('header-user-handle');
+        if (headerHandle) headerHandle.innerText = '@' + currentUserData.name.toLowerCase().replace(/\s+/g, '');
+    }
+
+    // Start Init
+    initPage();
+    
+    function toggleProfileDropdown() {
+        const dropdown = document.getElementById('profile-dropdown');
+        dropdown.classList.toggle('hidden');
+    }
+    
+    // Setup Global Search
+    // setupGlobalSearch(); // Assuming available in utils or site_branding
+</script>
+<script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/laravel-echo/1.15.3/echo.iife.js"></script>
+<script>
+    // Initialize Reverb/Echo Dynamically
+    async function setupRealtimeConfig() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/broadcasting/config`);
+        const config = await response.json();
+        
+        // Check SSL (HTTPS)
+        const isSecure = window.location.protocol === 'https:';
+        
+        // 💡 Live Server Fix:
+        // Agar config se host '0.0.0.0' aye, to browser ka apna hostname use karo
+        const finalHost = (config.host === '0.0.0.0') ? window.location.hostname : config.host;
+
+        window.Echo = new Echo({
+            broadcaster: 'pusher',
+            key: config.key,
+            cluster: 'mt1', // Required by pusher-js even for custom hosts
+            
+            // Host logic fixed
+            wsHost: finalHost,
+            
+            // Port Logic (Perfect hai apka)
+            wsPort: isSecure ? 443 : (config.port ?? 8080),
+            wssPort: isSecure ? 443 : (config.port ?? 8080),
+            
+            forceTLS: isSecure,
+            enabledTransports: ['ws', 'wss'],
+            disableStats: true,
+
+            // 🔐 AUTHENTICATION (Cookie-based)
+            // We use a custom authorizer to force 'credentials: include' for HttpOnly Cookies
+            authorizer: (channel, options) => {
+                return {
+                    authorize: (socketId, callback) => {
+                        fetch(`${API_BASE_URL}/broadcasting/auth`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Accept": "application/json",
+                                "X-XSRF-TOKEN": decodeURIComponent(document.cookie.split('; ').find(row => row.startsWith('XSRF-TOKEN='))?.split('=')[1] || '')
+                            },
+                            credentials: 'include', //  Key: Sends Cookies
+                            body: JSON.stringify({
+                                socket_id: socketId,
+                                channel_name: channel.name
+                            })
+                        })
+                        .then(response => {
+                            if (!response.ok) throw new Error('Auth failed');
+                            return response.json();
+                        })
+                        .then(data => {
+                            callback(false, data);
+                        })
+                        .catch(error => {
+                            callback(true, error);
+                        });
+                    }
                 };
             }
-        }
-        
-        function toggleProfileDropdown() {
-            const dropdown = document.getElementById('profile-dropdown');
-            dropdown.classList.toggle('hidden');
-        }
-        
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            const profileGroup = document.querySelector('.group\\/profile');
-            const dropdown = document.getElementById('profile-dropdown');
-            if (profileGroup && !profileGroup.contains(e.target) && !dropdown.classList.contains('hidden')) {
-                dropdown.classList.add('hidden');
-            }
+        });
+
+        console.log('🚀 Reverb Connected:', {
+            host: finalHost,
+            mode: isSecure ? 'Secure (WSS/443)' : 'Local (WS/8080)'
         });
         
-        setupGlobalSearch();
-    </script>
-</body>
-</html>
+        // Start listening
+        if (typeof setupRealtime === 'function') {
+            setupRealtime();
+        }
+
+    } catch (e) {
+        console.error('❌ Reverb Config Error:', e);
+    }
+}
+// Start
+setupRealtimeConfig();
+</script>
+<script src="js/message.js"></script>
+</body></html>
