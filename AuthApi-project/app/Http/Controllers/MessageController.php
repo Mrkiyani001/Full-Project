@@ -13,6 +13,7 @@ use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 
 class MessageController extends BaseController
 {
@@ -76,6 +77,14 @@ class MessageController extends BaseController
                 }
             } catch (Exception $e) {
                 return $this->Response(false, $e->getMessage(), null, 500);
+            }
+            $key = 'message:' . $user->id;
+            if(!$user->hasRole('super admin')){
+                if(RateLimiter::tooManyAttempts($key, 20)){
+                    $seconds = RateLimiter::availableIn($key);
+                    return $this->Response(false, 'You are sending messages too fast. Try again in ' . $seconds . ' seconds', null, 429);
+                }
+                RateLimiter::hit($key, 600);
             }
             AddMessage::dispatch(
                 $Conversation->id,
@@ -244,9 +253,9 @@ public function searchUsers(Request $request)
     $users = User::where(function ($q) use ($search){
         $q->where('name', 'like', '%' . $search . '%');
     })
-    ->paginate($limit)
     ->orderBy('name', 'asc')
-    ->get(['id','name','avatar']);
+    ->select(['id','name','avatar'])
+    ->paginate($limit);
     
     if (!$users) {
         return $this->Response(false, 'Users not found', null, 404);
