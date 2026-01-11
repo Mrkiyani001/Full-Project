@@ -255,7 +255,7 @@
     <script>
         const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
         const token = localStorage.getItem('auth_token');
-        console.log(token);
+
 
         // if (!token) {
         //      console.warn("Notification Page: No Local Token found. Redirecting to login...");
@@ -465,7 +465,10 @@
             `;
         }
     </script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
     <script src="js/config.js"></script>
+    <script src="js/fcm.js"></script>
     <script src="js/site_branding.js"></script>
 </body>
 

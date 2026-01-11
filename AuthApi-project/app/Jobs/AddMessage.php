@@ -10,6 +10,8 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Support\Facades\Log;
 use App\Events\MessagesEvent;
+use App\Models\Conversation;
+use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
@@ -55,7 +57,7 @@ public $updated_by;
         ]);
         if(!empty($this->attachments)){
             foreach($this->attachments as $attachment){
-                $extension = pathinfo($attachment, PATHINFO_EXTENSION);
+                $extension = strtolower(pathinfo($attachment, PATHINFO_EXTENSION));
                 $type = $this->getFileType($extension);
                 $Message->attachments()->create([
                     'file_name' => $attachment,
@@ -66,8 +68,29 @@ public $updated_by;
         }
         Log::info('AddMessage job completed');
         $Message->load('sender','receiver','attachments');
+
+        // Update Conversation timestamp only
+        $conversation = Conversation::find($this->Conversation_Id);
+        if ($conversation) {
+            $conversation->update([
+                'updated_at' => now(),
+            ]);
+        }
+        
         DB::commit();
         MessagesEvent::dispatch($Message);
+        
+        $sender = User::find($this->sender_Id);
+        $title = $sender ? $sender->name : 'New Message';
+
+        SendNotification::dispatch(
+            $this->sender_Id,           // CreatorId
+            $title,                     // Title (Sender Name)
+            $this->message ?? 'Sent an attachment', // Text
+            $this->receiver_Id,         // User ID (Recipient)
+            null,                       // Notifiable (Optional)
+            false                       // For Admin
+        );
     }catch(Exception $e){
         DB::rollBack();
         Log::error('AddMessage job failed: ' . $e->getMessage());

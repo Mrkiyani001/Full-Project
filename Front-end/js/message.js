@@ -1,33 +1,118 @@
 // --- State Management ---
 let activeChatUser = null;
+let activeOpenChatUserId = null; 
 let conversations = [];
 let echoInstance = null;
+let filesQueue = []; // Global File Queue
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     loadConversations();
     setupUserSearch();
-    // Message Form Submit
-    setupUserSearch();
-    // setupRealtime(); // Called by message.html after config load
-    document.getElementById('message-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        sendMessage();
-    });
 
-    // Enter to Send
-    document.getElementById('message-input').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+    // Message Form Submit
+    const msgForm = document.getElementById('message-form');
+    if (msgForm) {
+        msgForm.addEventListener('submit', (e) => {
             e.preventDefault();
             sendMessage();
+        });
+    }
+
+    // Enter to Send
+    const msgInput = document.getElementById('message-input');
+    if (msgInput) {
+        msgInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    }
+
+    // Attach File Input Listeners
+    ['camera-input', 'gallery-input', 'doc-input', 'other-input'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', handleFileSelect);
+        }
+    });
+});
+
+function handleFileSelect(event) {
+    const currentInput = event.target;
+    // Clear other inputs to ensure WYSIWYG
+    ['camera-input', 'gallery-input', 'doc-input', 'other-input'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el !== currentInput) {
+            el.value = '';
         }
     });
 
-    // File Input Change
-    document.getElementById('file-input').addEventListener('change', handleFileSelect);
-});
+    const newFiles = Array.from(currentInput.files);
+    if (newFiles.length > 0) {
+        // Add to queue
+        filesQueue = [...filesQueue, ...newFiles];
+        renderFilePreviews();
+        
+        // DEBUG TOAST
+        showToast(`Files added: ${newFiles.length}. Queue size: ${filesQueue.length}`, 'success');
 
-// --- API Interactions ---
+        // Hide menu
+        const menu = document.getElementById('media-menu');
+        if(menu) menu.classList.add('hidden');
+    }
+}
+
+function renderFilePreviews() {
+    const previewArea = document.getElementById('file-preview-area');
+    
+    if (filesQueue.length > 0) {
+        previewArea.classList.remove('hidden');
+        previewArea.innerHTML = '';
+
+        filesQueue.forEach((file, index) => {
+            const div = document.createElement('div');
+            div.className = 'relative shrink-0 w-16 h-16 bg-surface-border rounded-lg overflow-hidden flex items-center justify-center border border-white/5 group/file';
+
+             // Remove Button
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'absolute top-0.5 right-0.5 w-5 h-5 bg-black/50 hover:bg-black/80 rounded-full text-white flex items-center justify-center z-10 transition-colors backdrop-blur-sm opacity-0 group-hover/file:opacity-100';
+            removeBtn.innerHTML = '<span class="material-symbols-outlined text-[14px]">close</span>';
+            removeBtn.title = "Remove";
+            removeBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                removeAttachment(index);
+            };
+            div.appendChild(removeBtn);
+
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.className = 'w-full h-full object-cover';
+                div.appendChild(img);
+            } else {
+                 div.innerHTML = `
+                    <div class="flex flex-col items-center justify-center p-1">
+                        <span class="material-symbols-outlined text-white/50 text-2xl">description</span>
+                        <span class="text-[8px] text-white/50 truncate w-full text-center mt-1">${file.name.split('.').pop().toUpperCase()}</span>
+                    </div>
+                `;
+                div.appendChild(removeBtn);
+            }
+            previewArea.appendChild(div);
+        });
+    } else {
+        previewArea.classList.add('hidden');
+        previewArea.innerHTML = '';
+    }
+}
+
+function removeAttachment(index) {
+    filesQueue.splice(index, 1);
+    renderFilePreviews();
+}
 
 // --- API Interactions ---
 
@@ -41,7 +126,7 @@ async function loadConversations() {
             credentials: 'include'
         });
         const result = await response.json();
-        
+
         if (result.success) {
             conversations = result.data.items;
             renderConversations();
@@ -56,7 +141,7 @@ async function startNewChat() {
     const modal = document.getElementById('user-selection-modal');
     modal.classList.remove('hidden');
     document.getElementById('user-search-input').focus();
-    loadUsersForSearch(); 
+    loadUsersForSearch();
 }
 
 function closeUserSelectionModal() {
@@ -68,63 +153,63 @@ async function loadUsersForSearch(query = '') {
     listContainer.innerHTML = '<div class="text-center text-slate-500 py-4">Searching...</div>';
 
     try {
-        const url = query 
-            ? `${API_BASE_URL}/users/search?search=${encodeURIComponent(query)}` 
+        const url = query
+            ? `${API_BASE_URL}/users/search?search=${encodeURIComponent(query)}`
             : `${API_BASE_URL}/users/search?search=a`; // Default load some users
-            
+
         const response = await fetch(url, {
-             headers: {
+            headers: {
                 'Accept': 'application/json'
             },
             credentials: 'include'
         });
-        
+
         const result = await response.json();
         listContainer.innerHTML = '';
-        
+
         if (result.success && result.data.items.length > 0) {
             result.data.items.forEach(user => {
-                 // Don't show yourself
-                 if(user.id == currentUserData.id) return;
+                // Don't show yourself
+                if (user.id == currentUserData.id) return;
 
-                 const el = document.createElement('div');
-                 el.className = 'flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors';
-                 el.onclick = () => {
-                     openChat(user);
-                     closeUserSelectionModal();
-                 };
-                 
-                 const avatar = user.avatar ? `${API_BASE_URL.replace('/api', '')}/${user.avatar}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`;
-                 
-                 el.innerHTML = `
+                const el = document.createElement('div');
+                el.className = 'flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors';
+                el.onclick = () => {
+                    openChat(user);
+                    closeUserSelectionModal();
+                };
+
+                const avatar = user.avatar ? `${API_BASE_URL.replace('/api', '')}/${user.avatar}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`;
+
+                el.innerHTML = `
                     <div class="bg-center bg-no-repeat bg-cover rounded-full h-10 w-10 shrink-0" style="background-image: url('${avatar}')"></div>
                     <div class="flex flex-col">
                         <span class="text-white font-medium">${user.name}</span>
                     </div>
                  `;
-                 listContainer.appendChild(el);
+                listContainer.appendChild(el);
             });
         } else {
-             listContainer.innerHTML = '<div class="text-center text-slate-500 py-4">No users found</div>';
+            listContainer.innerHTML = '<div class="text-center text-slate-500 py-4">No users found</div>';
         }
-        
+
     } catch (error) {
-         listContainer.innerHTML = '<div class="text-center text-red-500 py-4">Error loading users</div>';
+        listContainer.innerHTML = '<div class="text-center text-red-500 py-4">Error loading users</div>';
     }
 }
 
 async function openChat(user) {
     console.log("openChat called with:", user); // DEBUG
     activeChatUser = user;
-    
+
     // UI Updates
     document.getElementById('empty-state').classList.add('hidden');
     document.getElementById('active-chat-content').classList.remove('hidden');
-    
+
     // Mobile: Hide List, Show Chat
     const sidebar = document.getElementById('conversations-sidebar');
     const chatArea = document.getElementById('chat-area');
-    
+
     if (window.innerWidth < 768) {
         sidebar.classList.add('hidden');
         chatArea.classList.remove('hidden');
@@ -132,10 +217,10 @@ async function openChat(user) {
 
     // Header Info
     document.getElementById('chat-header-name').innerText = user.name || user.friend_name;
-    const avatarUrl = user.avatar || user.friend_avatar 
+    const avatarUrl = user.avatar || user.friend_avatar
         ? `${API_BASE_URL.replace('/api', '')}/${user.avatar || user.friend_avatar}`
         : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.friend_name)}&background=random`;
-    
+
     document.getElementById('chat-header-avatar').style.backgroundImage = `url('${avatarUrl}')`;
 
     // Load Messages
@@ -147,7 +232,8 @@ async function openChat(user) {
     } else {
         targetId = user.id; // Search result User object
     }
-    
+
+    activeOpenChatUserId = targetId; // Set current chat user ID for realtime checks
     console.log("Target Receiver ID:", targetId); // DEBUG
 
     // Handle Deleted/Blocked User
@@ -157,91 +243,278 @@ async function openChat(user) {
                 <span class="material-symbols-outlined text-4xl mb-2">person_off</span>
                 <p>User is no longer available</p>
             </div>`;
-        document.getElementById('message-input').disabled = true;
-        document.getElementById('file-input').disabled = true;
-        document.getElementById('message-input').placeholder = "You cannot reply to this conversation.";
-        
-        // Hide Actions
+        disableChatInputs("You cannot reply to this conversation.");
         document.getElementById('chat-actions-btn').classList.add('hidden');
-        return; 
-    }
-    
-    // Enable inputs if valid
-    document.getElementById('message-input').disabled = false;
-    document.getElementById('file-input').disabled = false;
-    document.getElementById('message-input').placeholder = "Type a message...";
-    document.getElementById('chat-actions-btn').classList.remove('hidden');
-
-    loadMessages(targetId);
-    
-    // Mark as Active in Sidebar
-    renderConversations(); 
-}
-
-async function loadMessages(receiverId) {
-    console.log("loadMessages started for:", receiverId); // DEBUG
-    if (!receiverId) {
-        console.error("loadMessages aborted: Invalid receiverId");
         return;
     }
 
-    const container = document.getElementById('messages-container');
-    container.innerHTML = '<div class="text-center text-slate-500 py-4">Loading messages...</div>';
-    
-    const url = `${API_BASE_URL}/fetch_messages`;
-    console.log("Fetching messages from:", url); // DEBUG
+    // 1. You Blocked Them
+    if (user.is_blocked) {
+        document.getElementById('messages-container').innerHTML = `
+            <div class="flex flex-col items-center justify-center h-full text-slate-400 gap-4">
+                <div class="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center">
+                    <span class="material-symbols-outlined text-3xl text-red-500">block</span>
+                </div>
+                <div class="text-center">
+                    <p class="font-bold text-white mb-1">You blocked this user</p>
+                    <p class="text-sm text-slate-500">You need to unblock them to send messages.</p>
+                </div>
+                <button onclick="unblockChatUser(${targetId})" class="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-full font-semibold transition-colors">
+                    Unblock User
+                </button>
+            </div>`;
+        disableChatInputs("Unblock user to send message.");
+        document.getElementById('chat-actions-btn').classList.remove('hidden'); // Allow actions (e.g. Delete Chat)
+        // We do NOT return here if we want to show messages? 
+        // User said "conservation rha" (conversation remains). Usually blocked chats hide messages or just disable input. 
+        // If we want to show OLD messages, we should load messages BUT overlay/block input.
+        // Let's load messages but keep input disabled. 
+        // Actually, if I overwrite innerHTML above, I can't load messages.
+        // If the requirement is "Read only", I should load messages then append the block overlay or just header?
+        // For now, standard behavior is usually hiding content or just disabling input.
+        // User said "Unblock to send message", implying they might want to see history.
+        // I will LOAD messages, but disable input.
+        // So I will remove the innerHTML overwrite above and instead insert a footer-like warning or just rely on the Input Placeholder.
+    }
+
+    // 2. They Blocked You
+    else if (user.is_blocked_by) {
+        document.getElementById('messages-container').innerHTML = `
+            <div class="flex flex-col items-center justify-center h-full text-slate-500">
+                <span class="material-symbols-outlined text-4xl mb-2">error</span>
+                <p>User is not available</p>
+            </div>`;
+        disableChatInputs("You cannot reply to this conversation.");
+        document.getElementById('chat-actions-btn').classList.remove('hidden');
+        return; // Don't show messages if they blocked me (Privacy?) usually yes
+    }
+
+    const blockBtn = document.getElementById('action-block-btn');
+
+    if (user.is_blocked) {
+        // Load messages but disable input
+        disableChatInputs("You blocked this user. Unblock to send message.");
+
+        // Update Menu to "Unblock"
+        if (blockBtn) {
+            blockBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">check_circle</span> Unblock User';
+            blockBtn.onclick = () => unblockChatUser(targetId);
+            blockBtn.className = "w-full text-left px-4 py-3 text-sm text-green-400 hover:bg-green-500/10 hover:text-green-300 flex items-center gap-3 transition-colors";
+        }
+
+    } else if (!user.is_blocked && !user.is_blocked_by) {
+        // Enable inputs
+        const msgInput = document.getElementById('message-input');
+        if (msgInput) {
+            msgInput.disabled = false;
+            msgInput.placeholder = "Type a message...";
+        }
+        
+        const actionsBtn = document.getElementById('chat-actions-btn');
+        if (actionsBtn) actionsBtn.classList.remove('hidden');
+
+        // Reset Menu to "Block"
+        if (blockBtn) {
+            blockBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">block</span> Block User';
+            blockBtn.onclick = () => blockUser();
+            blockBtn.className = "w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-3 transition-colors";
+        }
+    }
+
+    // Mark conversation as read (Blue Ticks)
+    if ('friend_id' in user) {
+        fetch(`${API_BASE_URL}/conversation/read`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ conversation_id: user.id })
+        }).catch(err => console.error("Failed to mark read", err));
+    }
+
+    loadMessages(targetId);
+
+    // Mark as Active in Sidebar
+    renderConversations();
+}
+
+function disableChatInputs(placeholderText) {
+    document.getElementById('message-input').disabled = true;
+    document.getElementById('file-input').disabled = true;
+    document.getElementById('message-input').placeholder = placeholderText;
+}
+
+async function unblockChatUser(userId) {
+    if (!confirm("Unblock this user?")) return;
+    console.log("Unblocking User ID:", userId); // DEBUG
 
     try {
-        console.log("Sending fetch request now...");
-        const response = await fetch(url, {
-             method: 'POST',
-             headers: {
-                 'Content-Type': 'application/json',
-                 'Accept': 'application/json'
-             },
-             credentials: 'include',
-             body: JSON.stringify({ receiver_id: receiverId })
+        const response = await fetch(`${API_BASE_URL}/unblock_user`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ user_id: userId })
         });
-        console.log("Fetch response received:", response.status, response.statusText); // DEBUG
-        
+
+        console.log("Unblock Response Status:", response.status);
+        const data = await response.json();
+        console.log("Unblock Response Data:", data);
+
+        if (data.success || response.ok || response.status === 404) {
+            // Treat 404 (User not blocked) as success because the goal is to have them unblocked.
+            showToast('User unblocked', 'success');
+
+            // Optimistic Update
+            console.log("Unblock Optimistic Check:", activeChatUser?.friend_id, userId);
+            if (activeChatUser && (String(activeChatUser.friend_id) === String(userId) || String(activeChatUser.id) === String(userId))) {
+                console.log("Updating UI for unblocked user");
+                activeChatUser.is_blocked = false;
+                // Force clear to ensure visual change
+                document.getElementById('messages-container').innerHTML = '<div class="text-center py-4 text-slate-500">Refreshing...</div>';
+                openChat(activeChatUser);
+            }
+
+            // Sync background
+            loadConversations();
+        } else {
+            showToast(data.message || `Error ${response.status}: Failed to unblock`, 'error');
+        }
+    } catch (e) { console.error(e); showToast('Error unblocking connection', 'error'); }
+}
+
+async function loadMessages(receiverId) {
+    if (!receiverId) return;
+
+    const container = document.getElementById('messages-container');
+    const cacheKey = `chat_msg_${currentUserData.id}_${receiverId}`;
+
+    // 1. Try Cache
+    const cachedData = localStorage.getItem(cacheKey);
+    if (cachedData) {
+        try {
+            const messages = JSON.parse(cachedData);
+            if (Array.isArray(messages) && messages.length > 0) {
+                renderMessagesList(messages);
+                scrollToBottom();
+            } else {
+                container.innerHTML = '<div class="text-center text-slate-500 py-4">Loading messages...</div>';
+            }
+        } catch (e) {
+            console.error("Cache parse error", e);
+            container.innerHTML = '<div class="text-center text-slate-500 py-4">Loading messages...</div>';
+        }
+    } else {
+        container.innerHTML = '<div class="text-center text-slate-500 py-4">Loading messages...</div>';
+    }
+
+    // 2. Fetch Fresh Data (Background)
+    const url = `${API_BASE_URL}/fetch_messages`;
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ receiver_id: receiverId })
+        });
+
         const result = await response.json();
-        container.innerHTML = '';
-        
+
         if (result.success) {
-            result.data.forEach(msg => {
-                appendMessage(msg);
-            });
+            // Update Cache
+            localStorage.setItem(cacheKey, JSON.stringify(result.data));
+
+            // Re-render
+            renderMessagesList(result.data);
+
+            // Only scroll to bottom if we are at the bottom? 
+            // For now, always scroll to bottom on load/refresh matches standard behavior
             scrollToBottom();
+        } else {
+            if (!cachedData) container.innerHTML = '<div class="text-center text-slate-500 py-8">No messages yet</div>';
         }
     } catch (error) {
-        container.innerHTML = '<div class="text-center text-red-500 py-4">Error loading history</div>';
+        if (!cachedData) container.innerHTML = '<div class="text-center text-red-500 py-4">Error loading history</div>';
     }
 }
 
+function renderMessagesList(messages) {
+    const container = document.getElementById('messages-container');
+    container.innerHTML = '';
+    messages.forEach(msg => {
+        appendMessage(msg);
+    });
+}
+
+
 async function sendMessage() {
     if (!activeChatUser) return;
-    
+
     const input = document.getElementById('message-input');
     const text = input.value.trim();
-    const fileInput = document.getElementById('file-input');
-    const files = fileInput.files;
-
-    if (!text && files.length === 0) return;
-
-    // ... (Optimistic UI commented out)
+    
+    // Use global filesQueue for validation
+    if (!text && filesQueue.length === 0) return;
 
     const formData = new FormData();
-    formData.append('receiver_id', activeChatUser.id || activeChatUser.friend_id);
-    if (text) formData.append('message', text);
-    
-    for (let i = 0; i < files.length; i++) {
-        formData.append('attachments[]', files[i]);
+
+    if (editingMessageId) {
+        // --- UPDATE MODE ---
+        formData.append('id', editingMessageId);
+        formData.append('message', text);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/updatemessage`, {
+                method: 'POST',
+                credentials: 'include',
+                body: formData
+            });
+            const result = await response.json();
+
+            if (result.success || response.ok) {
+                showToast('Message updated', 'success');
+
+                // Optimistic UI Update
+                const msgEl = document.getElementById(`msg-${editingMessageId}`);
+                if (msgEl) {
+                    const textEl = msgEl.querySelector('.bg-primary, .bg-surface-border');
+                    if (textEl) {
+                        textEl.innerHTML = text + '<span class="text-[9px] opacity-70 ml-1">(edited)</span>';
+                    }
+                }
+
+                cancelEdit();
+                // We don't reload conversations here to keep flow smooth?
+                // Maybe update last message text in sidebar if it was the last one?
+                loadConversations();
+            } else {
+                showToast(result.message || 'Update failed', 'error');
+            }
+        } catch (e) {
+            showToast('Error updating message', 'error');
+        }
+        return; // Exit function
     }
+
+    // --- CREATE MODE ---
+    const receiverId = activeChatUser.friend_id || activeChatUser.id;
+    formData.append('receiver_id', receiverId);
+    if (text) formData.append('message', text);
+
+    // Append files from Queue
+    filesQueue.forEach(file => {
+        formData.append('attachments[]', file);
+    });
 
     // Reset Input
     input.value = '';
-    fileInput.value = '';
-    document.getElementById('file-preview-area').innerHTML = '';
+    // Clear inputs
+    ['camera-input', 'gallery-input', 'doc-input', 'other-input'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    
+    // Clear Queue
+    filesQueue = [];
+    renderFilePreviews();
     document.getElementById('file-preview-area').classList.add('hidden');
 
     try {
@@ -250,17 +523,263 @@ async function sendMessage() {
             credentials: 'include',
             body: formData
         });
-        
+
         const result = await response.json();
         if (result.success) {
             // Message sent (Event listener will append it, or we can do it here)
             loadConversations(); // Refresh list to move chat to top
         } else {
-             showToast(result.message, 'error');
+            showToast(result.message, 'error');
         }
     } catch (error) {
         showToast('Failed to send message', 'error');
     }
+}
+
+
+// --- Camera Logic ---
+let stream = null;
+let currentFacingMode = 'user';
+let mediaRecorder = null;
+let recordedChunks = [];
+let isRecording = false;
+let recordingStartTime = null;
+let timerInterval = null;
+
+async function openCamera() {
+    toggleMediaMenu(); // Close menu
+    const modal = document.getElementById('camera-modal');
+    modal.classList.remove('hidden');
+
+    try {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        
+        const constraints = {
+            video: {
+                facingMode: currentFacingMode
+            },
+            audio: true // Request audio for video recording
+        };
+
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const video = document.getElementById('camera-stream');
+        video.srcObject = stream;
+        
+        // Reset Recording UI
+        document.getElementById('recording-indicator').classList.add('hidden');
+        document.getElementById('record-btn').innerHTML = '<span class="material-symbols-outlined text-2xl">videocam</span>';
+        isRecording = false;
+        
+    } catch (err) {
+        console.error("Camera Error:", err);
+        showToast("Could not access camera/microphone", "error");
+        closeCamera();
+    }
+}
+
+function closeCamera() {
+    if (isRecording) {
+        stopRecording();
+    }
+    
+    const modal = document.getElementById('camera-modal');
+    modal.classList.add('hidden');
+    
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+}
+
+async function switchCamera() {
+    if (isRecording) return; // Don't switch while recording
+    currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+    await openCamera();
+}
+
+function capturePhoto() {
+    if (isRecording) return; // Don't snap while recording
+    
+    const video = document.getElementById('camera-stream');
+    const canvas = document.getElementById('camera-canvas');
+    const context = canvas.getContext('2d');
+
+    if (video.videoWidth && video.videoHeight) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+
+        canvas.toBlob(blob => {
+            const fileName = `camera_${Date.now()}.jpg`;
+            const file = new File([blob], fileName, { type: 'image/jpeg' });
+            
+            // Add to global queue
+            filesQueue.push(file);
+            renderFilePreviews();
+            
+            closeCamera();
+        }, 'image/jpeg', 0.9);
+    }
+}
+
+// --- Video Recording ---
+
+function toggleRecording() {
+    if (isRecording) {
+        stopRecording();
+    } else {
+        startRecording();
+    }
+}
+
+function startRecording() {
+    if (!stream) return;
+    
+    recordedChunks = [];
+    try {
+        mediaRecorder = new MediaRecorder(stream);
+    } catch (e) {
+        console.error(e);
+        showToast("MediaRecorder not supported", "error");
+        return;
+    }
+
+    mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+        }
+    };
+
+    mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const fileName = `video_${Date.now()}.webm`;
+        const file = new File([blob], fileName, { type: 'video/webm' });
+        
+        filesQueue.push(file);
+        renderFilePreviews();
+        closeCamera();
+    };
+
+    mediaRecorder.start();
+    isRecording = true;
+    recordingStartTime = Date.now();
+    
+    // UI Updates
+    document.getElementById('recording-indicator').classList.remove('hidden');
+    document.getElementById('record-btn').innerHTML = '<span class="material-symbols-outlined text-2xl">stop_circle</span>';
+    document.getElementById('snap-btn').classList.add('opacity-50', 'pointer-events-none'); // Disable photo snap
+    
+    timerInterval = setInterval(updateTimer, 1000);
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        isRecording = false;
+        clearInterval(timerInterval);
+        
+        // UI Reset (Handled mostly by closeCamera, but good to reset logic)
+        document.getElementById('recording-indicator').classList.add('hidden');
+        document.getElementById('record-btn').innerHTML = '<span class="material-symbols-outlined text-2xl">videocam</span>';
+        document.getElementById('snap-btn').classList.remove('opacity-50', 'pointer-events-none');
+    }
+}
+
+function updateTimer() {
+    const diff = Math.floor((Date.now() - recordingStartTime) / 1000);
+    const mins = Math.floor(diff / 60).toString().padStart(2, '0');
+    const secs = (diff % 60).toString().padStart(2, '0');
+    document.getElementById('recording-timer').innerText = `${mins}:${secs}`;
+}
+
+
+function handleFileSelect(event) {
+    const currentInput = event.target;
+    // Clear other inputs to ensure WYSIWYG
+    ['camera-input', 'gallery-input', 'doc-input', 'other-input'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el !== currentInput) {
+            el.value = '';
+        }
+    });
+
+    const newFiles = Array.from(currentInput.files);
+    if (newFiles.length > 0) {
+        // Add to queue
+        filesQueue.push(...newFiles);
+        renderFilePreviews();
+        
+        // Hide menu
+        const menu = document.getElementById('media-menu');
+        if(menu) menu.classList.add('hidden');
+    }
+}
+
+function renderFilePreviews() {
+    const previewArea = document.getElementById('file-preview-area');
+    if (!previewArea) return; // Guard clause
+
+    if (filesQueue.length > 0) {
+        previewArea.classList.remove('hidden');
+        previewArea.style.display = 'flex'; // Force display just in case
+        previewArea.innerHTML = '';
+
+        filesQueue.forEach((file, index) => {
+            const div = document.createElement('div');
+            // Ensure classes are sufficient for visibility
+            div.className = 'relative shrink-0 w-16 h-16 bg-surface-border rounded-lg overflow-hidden flex items-center justify-center border border-white/5 group';
+
+            // Remove Button
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'absolute top-0.5 right-0.5 w-5 h-5 bg-black/50 hover:bg-black/80 rounded-full text-white flex items-center justify-center z-10 transition-colors backdrop-blur-sm opacity-0 group-hover:opacity-100';
+            removeBtn.innerHTML = '<span class="material-symbols-outlined text-[14px]">close</span>';
+            removeBtn.title = "Remove";
+            removeBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                removeAttachment(index);
+            };
+            div.appendChild(removeBtn);
+
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.className = 'w-full h-full object-cover';
+                div.appendChild(img);
+            } else if (file.type.startsWith('video/')) {
+                // Video Preview
+                const video = document.createElement('video');
+                video.src = URL.createObjectURL(file);
+                video.className = 'w-full h-full object-cover';
+                div.appendChild(video);
+                // Play icon overlay
+                const playIcon = document.createElement('div');
+                playIcon.className = 'absolute inset-0 flex items-center justify-center pointer-events-none';
+                playIcon.innerHTML = '<span class="material-symbols-outlined text-white/80 text-xl drop-shadow-md">play_circle</span>';
+                div.appendChild(playIcon);
+            } else {
+                 div.innerHTML = `
+                    <div class="flex flex-col items-center justify-center p-1">
+                        <span class="material-symbols-outlined text-white/50 text-2xl">description</span>
+                        <span class="text-[8px] text-white/50 truncate w-full text-center mt-1">${file.name.split('.').pop().toUpperCase()}</span>
+                    </div>
+                `;
+                div.appendChild(removeBtn);
+            }
+            previewArea.appendChild(div);
+        });
+    } else {
+        previewArea.classList.add('hidden');
+        previewArea.style.display = 'none';
+        previewArea.innerHTML = '';
+    }
+}
+
+function removeAttachment(index) {
+    filesQueue.splice(index, 1);
+    renderFilePreviews();
 }
 
 // --- Rendering ---
@@ -275,13 +794,13 @@ function renderConversations() {
 
     conversations.forEach(conv => {
         const isSelected = activeChatUser && (activeChatUser.id == conv.friend_id || activeChatUser.friend_id == conv.friend_id);
-        
+
         const el = document.createElement('div');
         el.className = `group flex items-center gap-4 px-5 py-3 cursor-pointer transition-colors border-l-4 ${isSelected ? 'bg-surface-border/50 border-primary' : 'hover:bg-surface-border/30 border-transparent'}`;
         el.onclick = () => openChat(conv);
 
         const avatar = conv.friend_avatar ? `${API_BASE_URL.replace('/api', '')}/${conv.friend_avatar}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(conv.friend_name)}&background=random`;
-        
+
         el.innerHTML = `
             <div class="relative shrink-0">
                 <div class="bg-center bg-no-repeat bg-cover rounded-full h-12 w-12" style="background-image: url('${avatar}')"></div>
@@ -303,33 +822,48 @@ function renderConversations() {
 }
 
 function appendMessage(msg) {
+    console.log("Msg Data:", msg);
+    console.log("Attachments:", msg.attachments);
+    // Prevent duplicate messages
+    if (document.getElementById(`msg-${msg.id}`)) {
+        return;
+    }
+
     const container = document.getElementById('messages-container');
     const isMe = msg.sender_id == currentUserData.id;
     
+    // Check if deleted
+    const isDeleted = msg.is_deleted_everyone || msg.message === "This message was deleted"; 
+
+    // Add Date Separator if needed (simple check against last message could be added here)
+
     const wrapper = document.createElement('div');
-    wrapper.className = isMe 
-        ? 'flex flex-col items-end gap-1 ml-auto max-w-[80%]' 
+    wrapper.id = `msg-${msg.id}`; // Crucial for realtime updates
+    wrapper.className = isMe
+        ? 'flex flex-col items-end gap-1 ml-auto max-w-[80%]'
         : 'flex items-end gap-3 max-w-[80%]';
 
     // Avatar for other
     let avatarHtml = '';
     if (!isMe) {
-        const user = activeChatUser; // Should contain friend info
-        // Using chat header avatar as source of truth for now or default
         const headerAvatar = document.getElementById('chat-header-avatar');
-        // This is a bit hackerish, ideally we have the avatar URL stored perfectly
-         avatarHtml = `<div class="bg-center bg-no-repeat bg-cover rounded-full h-8 w-8 shrink-0 mb-1" style="${headerAvatar.style.backgroundImage}"></div>`;
+        avatarHtml = `<div class="bg-center bg-no-repeat bg-cover rounded-full h-8 w-8 shrink-0 mb-1" style="${headerAvatar.style.backgroundImage}"></div>`;
     }
 
     // Attachments
     let attachmentsHtml = '';
-    if (msg.attachments && msg.attachments.length > 0) {
+    if (!isDeleted && msg.attachments && msg.attachments.length > 0) {
         msg.attachments.forEach(att => {
             const url = `${API_BASE_URL.replace('/api', '')}/storage/Messages/${att.file_name}`;
             if (att.file_type === 'image') {
-                attachmentsHtml += `<img src="${url}" class="rounded-xl max-w-full mb-2 cursor-pointer hover:opacity-90 transition-opacity" onclick="window.open('${url}', '_blank')">`;
+                attachmentsHtml += `<img src="${url}" class="rounded-xl max-w-full mb-2 cursor-pointer hover:opacity-90 transition-opacity aspect-auto object-contain bg-black/20" onclick="window.open('${url}', '_blank')">`;
+            } else if (att.file_type === 'video') {
+                attachmentsHtml += `
+                    <div class="relative max-w-full mb-2 rounded-xl overflow-hidden bg-black/20">
+                        <video src="${url}" controls class="w-full max-h-[300px]"></video>
+                    </div>`;
             } else {
-                 attachmentsHtml += `
+                attachmentsHtml += `
                     <a href="${url}" target="_blank" class="flex items-center gap-3 p-3 bg-black/20 rounded-xl mb-2 hover:bg-black/30 transition-colors">
                         <span class="material-symbols-outlined text-white">description</span>
                         <span class="text-sm text-white underline truncate">${att.file_name}</span>
@@ -342,23 +876,118 @@ function appendMessage(msg) {
     const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     if (isMe) {
+        // Status Icon Logic
+        let statusIcon = 'done'; 
+        let statusColor = 'text-[#9da5b9]'; 
+        
+        if (msg.status === 'delivered') { statusIcon = 'done_all'; } 
+        else if (msg.status === 'read') { statusIcon = 'done_all'; statusColor = 'text-blue-400'; } 
+        else if (!msg.status || msg.status === 'sent') { statusIcon = 'done'; }
+
+        // DELETED STYLE
+        let messageContent = '';
+        let messageClasses = '';
+        
+        if (isDeleted) {
+            messageClasses = 'bg-surface-border/50 px-4 py-3 rounded-2xl rounded-br-none text-slate-400 text-sm leading-relaxed italic border border-white/5 flex items-center gap-2';
+            messageContent = '<span class="material-symbols-outlined text-[16px]">block</span> This message was deleted';
+        } else {
+            const text = msg.message || '';
+            if (text.trim() === '') {
+                 messageClasses = 'hidden'; // Hide bubble if empty
+            } else {
+                 messageClasses = 'bg-primary px-4 py-3 rounded-2xl rounded-br-none text-white text-sm leading-relaxed shadow-lg shadow-primary/10 relative';
+                 messageContent = text + (msg.is_edited ? '<span class="text-[9px] opacity-70 ml-1">(edited)</span>' : '');
+            }
+        }
+
+        // Menu Logic (Sender)
+        let menuButtons = '';
+        if (isDeleted) {
+            menuButtons = `
+                <button onclick="deleteMsg(${msg.id}, 'me')" class="w-full text-left px-4 py-2 text-xs text-slate-400 hover:bg-white/5 hover:text-white flex items-center gap-2">
+                     <span class="material-symbols-outlined text-[14px]">delete</span> Delete for me
+                </button>
+            `;
+        } else {
+            menuButtons = `
+                <button onclick="editMsg(${msg.id}, '${(msg.message || '').replace(/'/g, "\\'")}')" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[14px]">edit</span> Edit
+                </button>
+                <button onclick="deleteMsg(${msg.id}, 'everyone')" class="w-full text-left px-4 py-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[14px]">delete_forever</span> Delete for everyone
+                </button>
+                <button onclick="deleteMsg(${msg.id}, 'me')" class="w-full text-left px-4 py-2 text-xs text-slate-400 hover:bg-white/5 hover:text-white flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[14px]">delete</span> Delete for me
+                </button>
+            `;
+        }
+
+        const menuHtml = `
+            <div class="opacity-0 group-hover/msg:opacity-100 transition-opacity absolute right-full mr-2 z-10 bottom-0">
+                <button onclick="toggleMessageMenu(${msg.id})" class="p-1 rounded-full hover:bg-white/10 text-slate-400 hover:text-white">
+                    <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                </button>
+                <div id="msg-menu-${msg.id}" class="hidden absolute right-0 bottom-full mb-1 w-40 bg-[#1e2532] border border-surface-border rounded-xl shadow-xl overflow-hidden z-20">
+                    ${menuButtons}
+                </div>
+            </div>`;
+
         wrapper.innerHTML = `
             ${attachmentsHtml}
-            <div class="bg-primary px-4 py-3 rounded-2xl rounded-br-none text-white text-sm leading-relaxed shadow-lg shadow-primary/10">
-                ${msg.message || ''}
+            <div class="group/msg relative flex items-end gap-2 ml-auto">
+                 ${menuHtml}
+                <div class="${messageClasses}">
+                    ${messageContent}
+                </div>
             </div>
             <div class="flex items-center gap-1 mr-1">
                 <span class="text-[#9da5b9] text-[11px]">${time}</span>
-                <span class="material-symbols-outlined text-[14px] ${msg.status == 'read' ? 'text-blue-400' : 'text-[#9da5b9]'}">done_all</span>
+                <span id="status-${msg.id}" class="material-symbols-outlined text-[16px] ${statusColor}">${statusIcon}</span>
             </div>
         `;
     } else {
+        // INCOMING
+        let messageContent = '';
+
+        let messageClasses = '';
+        
+        if (isDeleted) {
+            messageClasses = 'bg-surface-border/50 px-4 py-3 rounded-2xl rounded-bl-none text-slate-400 text-sm leading-relaxed italic border border-white/5 flex items-center gap-2';
+            messageContent = '<span class="material-symbols-outlined text-[16px]">block</span> This message was deleted';
+        } else {
+             const text = msg.message || '';
+             if (text.trim() === '') {
+                 messageClasses = 'hidden';
+             } else {
+                 messageClasses = 'bg-surface-border px-4 py-3 rounded-2xl rounded-bl-none text-white text-sm leading-relaxed';
+                 messageContent = text + (msg.is_edited ? '<span class="text-[9px] opacity-70 ml-1">(edited)</span>' : '');
+             }
+        }
+
+        // Menu Logic (Receiver)
+        // Always show "Delete for me" even if deleted
+        const menuHtml = `
+            <div class="opacity-0 group-hover/msg:opacity-100 transition-opacity relative z-10">
+                <button onclick="toggleMessageMenu(${msg.id})" class="p-1 rounded-full hover:bg-white/10 text-slate-400 hover:text-white">
+                    <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                </button>
+                <div id="msg-menu-${msg.id}" class="hidden absolute left-0 bottom-full mb-1 w-32 bg-[#1e2532] border border-surface-border rounded-xl shadow-xl overflow-hidden z-20">
+                        <button onclick="deleteMsg(${msg.id}, 'me')" class="w-full text-left px-4 py-2 text-xs text-slate-400 hover:bg-white/5 hover:text-white flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[14px]">delete</span> Delete for me
+                    </button>
+                </div>
+            </div>`;
+
         wrapper.innerHTML = `
             ${avatarHtml}
-            <div class="flex flex-col gap-1">
+            <div class="flex flex-col gap-1 items-start group/msg relative">
                  ${attachmentsHtml}
-                <div class="bg-surface-border px-4 py-3 rounded-2xl rounded-bl-none text-white text-sm leading-relaxed">
-                    ${msg.message || ''}
+                <div class="flex items-end gap-2">
+                    <div class="${messageClasses}">
+                        ${messageContent}
+                    </div>
+                    ${menuHtml}
                 </div>
                 <span class="text-[#9da5b9] text-[11px] ml-1">${time}</span>
             </div>
@@ -366,6 +995,97 @@ function appendMessage(msg) {
     }
 
     container.appendChild(wrapper);
+}
+
+// --- Message Actions ---
+let editingMessageId = null;
+
+function toggleMessageMenu(id) {
+    // Hide others
+    document.querySelectorAll('[id^=msg-menu-]').forEach(el => {
+        if (el.id !== `msg-menu-${id}`) el.classList.add('hidden');
+    });
+    const menu = document.getElementById(`msg-menu-${id}`);
+    if (menu) menu.classList.toggle('hidden');
+}
+
+function editMsg(id, text) {
+    toggleMessageMenu(id); // hide menu
+    editingMessageId = id;
+
+    // Populate Input
+    const input = document.getElementById('message-input');
+    input.value = text;
+    input.focus();
+
+    // Change UI to Edit Mode
+    const form = document.getElementById('message-form');
+    // Add visual indicator or change button?
+    // Let's create a "Cancel Edit" button dynamically or just change placeholder
+    input.placeholder = "Editing message...";
+    input.classList.add('border-primary', 'ring-1', 'ring-primary'); // Highlight
+
+    // We need a cancel button. Let's append if not exists
+    let cancelBtn = document.getElementById('cancel-edit-btn');
+    if (!cancelBtn) {
+        cancelBtn = document.createElement('button');
+        cancelBtn.id = 'cancel-edit-btn';
+        cancelBtn.type = 'button';
+        cancelBtn.innerHTML = '<span class="material-symbols-outlined text-red-500 text-[18px]">close</span>';
+
+        // Form structure: form -> [fileBtn, div(wrapper) -> textarea, sendBtn]
+        // We want to put it inside the wrapper, relative to textarea? 
+        // Or just absolute right in the form? The form has 'relative' usually? No, it has flex.
+        // Let's put it in the textarea wrapper.
+        const wrapper = input.parentElement;
+        if (wrapper) {
+            wrapper.classList.add('relative'); // Ensure wrapper is relative
+            cancelBtn.className = 'absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition-colors z-10';
+            cancelBtn.onclick = cancelEdit;
+            wrapper.appendChild(cancelBtn);
+        }
+    }
+    cancelBtn.classList.remove('hidden');
+}
+
+function cancelEdit() {
+    editingMessageId = null;
+    const input = document.getElementById('message-input');
+    input.value = '';
+    input.placeholder = "Type a message...";
+    input.classList.remove('border-primary', 'ring-1', 'ring-primary');
+
+    const cancelBtn = document.getElementById('cancel-edit-btn');
+    if (cancelBtn) cancelBtn.classList.add('hidden');
+}
+
+async function deleteMsg(id, type) {
+    toggleMessageMenu(id);
+    if (!confirm(type === 'everyone' ? 'Delete for everyone?' : 'Delete for me?')) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/deletemessage`, {
+            method: 'DELETE', // Change to DELETE method? No, API definition is DELETE route.
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ id: id, delete_type: type })
+        });
+
+        const data = await response.json();
+        if (data.success || response.ok) {
+            showToast('Message deleted', 'success');
+            // Remove from DOM immediately
+            const el = document.getElementById(`msg-${id}`);
+            if (el) el.remove();
+
+            // If delete for everyone, backend might send event, but for 'me' we just remove.
+            loadConversations();
+        } else {
+            showToast(data.message || 'Failed to delete', 'error');
+        }
+    } catch (e) {
+        showToast('Error deleting message', 'error');
+    }
 }
 
 // --- Utilities ---
@@ -381,20 +1101,21 @@ function backToConversations() {
     document.getElementById('active-chat-content').classList.add('hidden');
     document.getElementById('empty-state').classList.remove('hidden');
     activeChatUser = null;
+    activeOpenChatUserId = null; // Clear active chat
 }
 
 function handleFileSelect(event) {
     const files = event.target.files;
     const previewArea = document.getElementById('file-preview-area');
-    
+
     if (files.length > 0) {
         previewArea.classList.remove('hidden');
         previewArea.innerHTML = '';
-        
+
         Array.from(files).forEach(file => {
             const div = document.createElement('div');
             div.className = 'relative shrink-0 w-16 h-16 bg-surface-border rounded-lg overflow-hidden flex items-center justify-center';
-            
+
             if (file.type.startsWith('image/')) {
                 const img = document.createElement('img');
                 img.src = URL.createObjectURL(file);
@@ -413,7 +1134,7 @@ function handleFileSelect(event) {
 function setupUserSearch() {
     const input = document.getElementById('user-search-input');
     let debounceTimer;
-    
+
     input.addEventListener('input', (e) => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
@@ -431,7 +1152,7 @@ function updateTotalUnread() {
     const count = conversations.reduce((sum, conv) => sum + parseInt(conv.unread_message), 0);
     const badge = document.getElementById('total-unread-count');
     badge.innerText = count;
-    if(count === 0) badge.classList.add('hidden');
+    if (count === 0) badge.classList.add('hidden');
     else badge.classList.remove('hidden');
 }
 
@@ -448,12 +1169,28 @@ function toggleChatActions() {
     menu.classList.toggle('hidden');
 }
 
+function toggleMediaMenu() {
+    const menu = document.getElementById('media-menu');
+    menu.classList.toggle('hidden');
+}
+
 // Close menu when clicking outside
 document.addEventListener('click', (e) => {
-    const menu = document.getElementById('chat-actions-menu');
-    const button = document.querySelector('button[onclick="toggleChatActions()"]');
-    if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && !button.contains(e.target)) {
-        menu.classList.add('hidden');
+    // Chat Actions Menu
+    const chatMenu = document.getElementById('chat-actions-menu');
+    const chatBtn = document.getElementById('chat-actions-btn'); // ID needs to be added to HTML button if not present, check HTML.
+    // Actually the button has onclick="toggleChatActions()" but finding it by selector is safer.
+    const chatBtnEl = document.querySelector('button[onclick="toggleChatActions()"]');
+    
+    if (chatMenu && !chatMenu.classList.contains('hidden') && !chatMenu.contains(e.target) && (!chatBtnEl || !chatBtnEl.contains(e.target))) {
+        chatMenu.classList.add('hidden');
+    }
+
+    // Media Menu
+    const mediaMenu = document.getElementById('media-menu');
+    const mediaBtn = document.querySelector('button[onclick="toggleMediaMenu()"]');
+    if (mediaMenu && !mediaMenu.classList.contains('hidden') && !mediaMenu.contains(e.target) && (!mediaBtn || !mediaBtn.contains(e.target))) {
+        mediaMenu.classList.add('hidden');
     }
 });
 
@@ -461,10 +1198,10 @@ document.addEventListener('click', (e) => {
 function showReportModal() {
     toggleChatActions();
     if (!activeChatUser) return;
-    
+
     // Create/Reuse a generic report modal
     let modal = document.getElementById('report-modal');
-    
+
     // If modal exists but somehow content is missing (e.g. race condition or bad state), remove it
     if (modal && !modal.querySelector('#report-reason')) {
         modal.remove();
@@ -488,10 +1225,10 @@ function showReportModal() {
         `;
         document.body.appendChild(modal);
     }
-    
+
     const textarea = modal.querySelector('#report-reason');
     if (textarea) textarea.value = '';
-    
+
     modal.classList.remove('hidden');
 }
 
@@ -505,9 +1242,9 @@ async function submitReport() {
         showToast('Please provide a reason', 'error');
         return;
     }
-    
+
     if (!activeChatUser) return;
-    
+
     const targetId = activeChatUser.id || activeChatUser.friend_id;
     if (!targetId) return;
 
@@ -525,7 +1262,7 @@ async function submitReport() {
             },
             body: formData
         });
-        
+
         const data = await response.json();
         console.log(data);
         if (data.success || data.status) {
@@ -546,43 +1283,81 @@ function reportChat() {
 
 async function deleteChat() {
     toggleChatActions();
-    if(!activeChatUser) return;
-    
-    if(!confirm("Are you sure you want to delete this conversation? This will delete all messages.")) return;
+    if (!activeChatUser) return;
 
-    // Use activeChatUser.id (friend_id)
-    const targetUserId = activeChatUser.id || activeChatUser.friend_id;
-    
-    if (!targetUserId) {
-         showToast('Error identifying chat user', 'error');
-         return;
+    // For now, consistent with user's backend pending/unimplemented state or simple message
+    // If backend implements deleteconversation (global), we can use it.
+    // User added deleteconversation API, let's try to use it if they want.
+    // But safely, let's stick to "Not implemented" or simple confirm for now to avoid accidental data loss if not tested.
+    // User requested "Clear Chat", not explicit Delete fix.
+    showToast('Delete conversation backend pending', 'info');
+}
+
+async function clearChat() {
+    toggleChatActions();
+
+    // Check if we have a valid conversation ID
+    let conversationId = null;
+    if ('friend_id' in activeChatUser) {
+        conversationId = activeChatUser.id;
+    } else {
+        showToast("No conversation started yet", "info");
+        return;
     }
 
-    // Since we don't have a single 'deleteConversation' endpoint that takes a user ID in the current API list (it has deleteMessage taking message_id),
-    // we might need to verify if there isn't one.
-    // However, looking at the previous analysis, `deleteMessage` is for single message.
-    // If no conversation delete exists, we might show a toast for now or implement it.
-    // Checking routes showed `deleteMessage`, but not `deleteConversation`.
-    // Wait, the user prompt said "Delete Chat" was requested.
-    // I will assume for now I should just clear UI and maybe notify 'Not implemented on backend yet' if I can't find the endpoint.
-    // BUT, let's look at `deleteMessage` - maybe it clears all if no ID passed? Unlikely.
-    
-    showToast('Delete conversation backend pending', 'info');
+    if (!confirm("Are you sure you want to clear this chat? This will remove all messages for you.")) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/clearconversation`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ id: conversationId })
+        });
+
+        const data = await response.json();
+
+        if (data.success || response.ok) {
+            showToast('Chat cleared successfully', 'success');
+            // Clear UI
+            document.getElementById('messages-container').innerHTML = '<div class="text-center text-slate-500 py-8">No messages yet</div>';
+            loadConversations();
+        } else {
+            showToast(data.message || 'Failed to clear chat', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        showToast('Error clearing chat', 'error');
+    }
+}
+
+function reportChat() {
+    toggleChatActions();
+    if (!activeChatUser) return;
+    document.getElementById('report-modal')?.classList.remove('hidden');
 }
 
 async function blockUser() {
     toggleChatActions();
-    if(!activeChatUser) return;
-    
-    const targetUserId = activeChatUser.id || activeChatUser.friend_id;
+    if (!activeChatUser) return;
+
+    let targetUserId;
+    if ('friend_id' in activeChatUser) {
+        targetUserId = activeChatUser.friend_id;
+    } else {
+        targetUserId = activeChatUser.id;
+    }
     const targetName = activeChatUser.name || activeChatUser.friend_name || 'User';
 
-    if(!confirm(`Are you sure you want to block ${targetName}? They will be unfriended and unable to message you.`)) return;
-    
+    if (!confirm(`Are you sure you want to block ${targetName}? They will be unfriended and unable to message you.`)) return;
+
     try {
         const formData = new FormData();
         formData.append('user_id', targetUserId);
-        
+
         const response = await fetch(`${API_BASE_URL}/block_user`, {
             method: 'POST',
             credentials: 'include',
@@ -591,26 +1366,18 @@ async function blockUser() {
             },
             body: formData
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             showToast(`Blocked ${targetName}`, 'success');
-            // Clear chat and return to list
-            document.getElementById('chat-messages').innerHTML = '';
-            document.getElementById('chat-header').classList.add('hidden');
-            document.getElementById('chat-input-area').classList.add('hidden');
-            document.querySelector('.no-chat-selected').classList.remove('hidden');
-            loadConversations(); // Refresh list (should remove them)
-            
-            // Allow time for refresh then update UI
-            setTimeout(() => {
-                 // Close mobile view if open
-                const chatContainer = document.getElementById('chat-container');
-                if (chatContainer.classList.contains('mobile-open')) {
-                    chatContainer.classList.remove('mobile-open');
-                }
-            }, 500);
+            loadConversations();
+
+            // Stay in chat but update UI to blocked state
+            if (activeChatUser) {
+                activeChatUser.is_blocked = true;
+                openChat(activeChatUser);
+            }
 
         } else {
             showToast(data.message || 'Block failed', 'error');
@@ -625,22 +1392,131 @@ async function blockUser() {
 
 function setupRealtime() {
     if (window.Echo) {
-        // Listen for new messages on my channel
+        // Listen for message status updates (Checks/Blue Ticks)
+        window.Echo.private(`chat.${currentUserData.id}`)
+            .listen('MessageStatusEvent', (e) => {
+                console.log('Status Update Recieved:', e);
+                // Update specific message icon
+                const statusSpan = document.getElementById(`status-${e.id}`);
+                if (statusSpan) {
+                    if (e.status === 'delivered') {
+                        // Double Tick (Gray)
+                        statusSpan.innerText = 'done_all';
+                        statusSpan.className = 'material-symbols-outlined text-[16px] text-[#9da5b9]';
+                    } else if (e.status === 'read') {
+                        // Double Tick (Blue)
+                        statusSpan.innerText = 'done_all';
+                        statusSpan.className = 'material-symbols-outlined text-[16px] text-blue-400';
+                    }
+                } else {
+                    console.log("Status span not found for msg:", e.id);
+                }
+            });
+
+        // Listen for New Messages (To mark as Delivered)
         window.Echo.private(`chat.${currentUserData.id}`)
             .listen('MessagesEvent', (e) => {
-                console.log('New Message:', e);
-                
-                // If chatting with this person, append message
-                if (activeChatUser && (activeChatUser.id == e.sender_id || activeChatUser.friend_id == e.sender_id)) {
+                console.log('New Message Received:', e);
+
+                // 1. Auto-mark as Delivered (Always, since we received it via Pusher)
+                if (e.message && e.message.id) {
+                    markAsDelivered(e.message.id);
+                }
+
+                // 2. Append to chat if open
+                // Check match for INCOMING (Sender is friend) OR OUTGOING (Sender is me, Receiver is friend)
+                const isIncoming = activeOpenChatUserId && String(activeOpenChatUserId) === String(e.message.sender_id);
+                const isOutgoing = activeOpenChatUserId && String(currentUserData.id) === String(e.message.sender_id) && String(activeOpenChatUserId) === String(e.message.receiver_id);
+
+                console.log(`Msg Check: Incoming=${isIncoming}, Outgoing=${isOutgoing}, Active=${activeOpenChatUserId}, Sender=${e.message.sender_id}`);
+
+                if (isIncoming || isOutgoing) {
+                    console.log("Chat open, appending message...");
                     appendMessage(e.message);
                     scrollToBottom();
-                    
-                    // TODO: Mark as read via API
+
+                    // Update Cache
+                    const cacheKey = `chat_msg_${currentUserData.id}_${activeOpenChatUserId}`;
+                    const cachedData = localStorage.getItem(cacheKey);
+                    if (cachedData) {
+                        try {
+                            const messages = JSON.parse(cachedData);
+                            if (Array.isArray(messages)) {
+                                messages.push(e.message);
+                                localStorage.setItem(cacheKey, JSON.stringify(messages));
+                            }
+                        } catch (err) { }
+                    }
+
+                    // If INCOMING, mark as READ
+                    if (isIncoming) {
+                        setTimeout(() => {
+                            fetch(`${API_BASE_URL}/conversation/read`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ conversation_id: e.message.sender_id })
+                            }).catch(console.error);
+                        }, 500);
+                    }
+
+                } else {
+                    // Start sound notification or title flash?
+                    showToast(`New message from ${e.message.sender.name}`, 'success');
                 }
-                
-                // Always refresh list to update unread counts and position
+
+                // 3. Refresh lists
                 loadConversations();
-                showToast(`New message from ${e.message.sender.name}`);
+            })
+            .listen('DeleteMessageEvent', (e) => {
+                console.log('Message Deleted Event:', e);
+                if (e.id) {
+                    // Find the message element
+                    const msgEl = document.getElementById(`msg-${e.id}`);
+                    if (msgEl) {
+                        // Update UI to "Deleted" state
+                        const contentDiv = msgEl.querySelector('.bg-primary, .bg-surface-border');
+                        if (contentDiv) {
+                            contentDiv.className = 'bg-surface-border/50 px-4 py-3 rounded-2xl text-slate-400 text-sm leading-relaxed italic border border-white/5 flex items-center gap-2';
+                            if (msgEl.classList.contains('items-end')) {
+                                // If it was my message, maybe keep right align but style logic is same
+                                contentDiv.className += ' rounded-br-none';
+                            } else {
+                                contentDiv.className += ' rounded-bl-none';
+                            }
+                            contentDiv.innerHTML = '<span class="material-symbols-outlined text-[16px]">block</span> This message was deleted';
+
+                            // Remove attachments if any (simplicity)
+                            // Actually appendMessage handles attachments separately, we might need to clear them.
+                            // But replacing innerHTML of wrapper is harder.
+                            // Let's re-render utilizing appendMessage logic? No, too complex.
+                            // Just replace the text box content.
+                            // And hide attachments?
+                            const attachmentsDiv = msgEl.querySelector('img, a');
+                            // This selector is weak.
+                            // Better: Reload chat or strict DOM manipulation?
+                            // Strict DOM:
+                            // The structure is Wrapper -> [Attachments, TextDiv].
+                            // We should remove attachments siblings.
+                            while (contentDiv.previousElementSibling) {
+                                contentDiv.previousElementSibling.remove();
+                            }
+                        }
+                    }
+                }
             });
+    }
+}
+async function markAsDelivered(messageId) {
+    try {
+        await fetch(`${API_BASE_URL}/message/delivered`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ message_id: messageId })
+        });
+        console.log("Marked as delivered:", messageId);
+    } catch (e) {
+        console.error("Failed to mark delivered", e);
     }
 }

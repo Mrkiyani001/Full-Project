@@ -478,4 +478,22 @@ class AuthController extends BaseController
             return $this->Response(false, $e->getMessage(), null, 500);
         }
     }
+
+    public function update_fcm_token(Request $request)
+    {
+        $this->validateRequest($request, [
+            'fcm_token' => 'required|string',
+        ]);
+        try {
+            $user = auth('api')->user();
+            if (!$user) {
+                return $this->unauthorized();
+            }
+            $user->fcm_token = $request->fcm_token;
+            $user->save();
+            return $this->Response(true, 'FCM Token updated successfully');
+        } catch (\Exception $e) {
+            return $this->Response(false, $e->getMessage(), null, 500);
+        }
+    }
 }

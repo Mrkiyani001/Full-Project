@@ -49,15 +49,17 @@ function injectToastStyles() {
         }
 
         /* Types */
-        .toast.success { border-left: 4px solid #215bed; }
+        .toast.success { border-left: 4px solid #22c55e; }
         .toast.error { border-left: 4px solid #ef4444; }
+        .toast.info { border-left: 4px solid #215bed; }
 
         /* Icons */
         .toast .material-symbols-outlined {
             font-size: 20px;
         }
-        .toast.success .material-symbols-outlined { color: #215bed; }
+        .toast.success .material-symbols-outlined { color: #22c55e; }
         .toast.error .material-symbols-outlined { color: #ef4444; }
+        .toast.info .material-symbols-outlined { color: #215bed; }
     `;
     document.head.appendChild(style);
 }
@@ -78,7 +80,9 @@ window.showToast = function (message, type = 'success') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
 
-    let icon = type === 'success' ? 'check_circle' : 'error';
+    let icon = 'check_circle';
+    if (type === 'error') icon = 'error';
+    if (type === 'info') icon = 'info';
 
     toast.innerHTML = `
         <span class="material-symbols-outlined">${icon}</span>

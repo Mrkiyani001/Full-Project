@@ -49,7 +49,7 @@ Route::get('/broadcasting/config', function () {
         'key' => env('REVERB_APP_KEY'),
         // ⚠️ CHANGE: REVERB_HOST ki jagah VITE_REVERB_HOST use karein
         // Kyunki .env mein VITE_REVERB_HOST="web.kiyanibhai.site" hai
-        'host' => env('VITE_REVERB_HOST'), 
+        'host' => env('VITE_REVERB_HOST'),
         'port' => env('REVERB_PORT'),
         'scheme' => env('REVERB_SCHEME', 'http'),
     ]);
@@ -143,6 +143,7 @@ Route::group(['middleware' => ['api', 'auth:api']], function () {
     Route::post('getUser', [AuthController::class, 'getUser']);
     Route::put('updateUser', [AuthController::class, 'update_user']);
     Route::post('updatePassword', [AuthController::class, 'update_password']);
+    Route::post('update-fcm-token', [AuthController::class, 'update_fcm_token']);
     Route::post('deactivate_account', [AuthController::class, 'deactivate_account']);
     Route::delete('delete_user', [AuthController::class, 'delete_user']);
 
@@ -214,8 +215,12 @@ Route::group(['middleware' => ['api', 'auth:api']], function () {
     Route::post('updatemessage', [MessageController::class, 'updateMessage'])->middleware('permission:message update');
     Route::delete('deletemessage', [MessageController::class, 'deleteMessage'])->middleware('permission:message delete');
     Route::post('fetch_messages', [MessageController::class, 'getMessages'])->middleware('permission:get messages');
+    Route::post('message/delivered', [MessageController::class, 'markAsDelivered']);
+    Route::post('conversation/read', [MessageController::class, 'markConversationAsRead']);
 
     Route::get('getconversations', [MessageController::class, 'getConversation'])->middleware('permission:get conversation');
+    Route::delete('deleteconversation', [MessageController::class, 'deleteconversation'])->middleware('permission:delete conversation');
+    Route::post('clearconversation', [MessageController::class, 'clearconversation'])->middleware('permission:clear chat');
     Route::get('users/search', [MessageController::class, 'searchUsers']);
 
     // Block Routes
@@ -227,4 +232,3 @@ Route::group(['middleware' => ['api', 'auth:api']], function () {
 
 
 // Use full namespace for public route to avoid alias issues if valid
-

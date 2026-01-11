@@ -222,7 +222,7 @@
         <div
             class="fixed bottom-[10%] right-[10%] w-[400px] h-[400px] bg-purple-500/10 rounded-full blur-[100px] pointer-events-none z-0">
         </div>
-        <div class="relative w-full max-w-[840px] z-10 flex flex-col gap-6">
+        <div id="profile-content" class="relative w-full max-w-[840px] z-10 flex flex-col gap-6">
             <a href="homefeed-dashboard.html"
                 class="hidden md:flex items-center gap-2 text-secondary-text hover:text-white cursor-pointer transition-colors px-2 relative z-50">
                 <span class="material-symbols-outlined text-sm">arrow_back</span>
@@ -501,6 +501,12 @@
                     },
                     body: JSON.stringify({ id: targetUserId })
                 });
+
+                if (response.status === 404) {
+                    renderUserNotFound();
+                    return;
+                }
+
                 const data = await response.json();
 
                 if (data.success) {
@@ -510,10 +516,30 @@
                     loadTabContent();
                 } else {
                     showToast('User not found', 'error');
+                    renderUserNotFound();
                 }
             } catch (e) {
                 console.error(e);
+                if(e.message.includes('404')) {
+                    renderUserNotFound();
+                }
             }
+        }
+
+        function renderUserNotFound() {
+            document.getElementById('profile-content').innerHTML = `
+                <div class="flex flex-col items-center justify-center min-h-[50vh] text-slate-400">
+                    <span class="material-symbols-outlined text-6xl mb-4 text-slate-500">person_off</span>
+                    <h2 class="text-xl font-bold text-white mb-2">User Not Found</h2>
+                    <p>This profile may have been deleted or does not exist.</p>
+                    <a href="active-conversations.html" class="mt-6 px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-colors">
+                        Go Back
+                    </a>
+                </div>
+            `;
+            // Hide loading skeleton if present
+            document.getElementById('loading-skeleton')?.classList.add('hidden');
+            document.getElementById('profile-content')?.classList.remove('hidden');
         }
 
         function renderProfile(user) {
@@ -647,21 +673,71 @@
 
             const actionsContainer = document.getElementById('profile-actions');
             actionsContainer.innerHTML = '';
+            
+            // Wrapper for buttons + menu
+            const buttonWrapper = document.createElement('div');
+            buttonWrapper.className = 'flex items-center gap-2 relative';
+
             if (isOwner) {
                 const editBtn = document.createElement('button');
                 editBtn.className = "px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-semibold text-sm hover:bg-white/10 hover:border-white/20 transition-all flex items-center gap-2";
                 editBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">edit</span> Edit Profile';
                 editBtn.onclick = () => window.location.href = 'editprofile.html';
-                actionsContainer.appendChild(editBtn);
+                buttonWrapper.appendChild(editBtn);
             } else {
                 const msgBtn = document.createElement('button');
                 msgBtn.className = "px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-semibold text-sm hover:bg-white/10 hover:border-white/20 transition-all flex items-center gap-2 shadow-lg shadow-black/20";
                 msgBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">mail</span> Message';
-                msgBtn.onclick = () => alert('Messaging coming soon!');
-                actionsContainer.appendChild(msgBtn);
+                msgBtn.onclick = () => window.location.href = `message.html?user_id=${user.id}`; // Redirect to chat
+                buttonWrapper.appendChild(msgBtn);
 
                 checkFollowStatus(user.id);
             }
+
+            // --- 3-Dot Action Menu ---
+            const moreBtn = document.createElement('button');
+            moreBtn.className = "w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors";
+            moreBtn.innerHTML = '<span class="material-symbols-outlined">more_vert</span>';
+            moreBtn.onclick = (e) => {
+                e.stopPropagation();
+                document.getElementById('profile-action-menu').classList.toggle('hidden');
+            };
+            buttonWrapper.appendChild(moreBtn);
+
+            // Menu Dropdown
+            const menuDropdown = document.createElement('div');
+            menuDropdown.id = 'profile-action-menu';
+            menuDropdown.className = "hidden absolute top-full right-0 mt-2 w-48 bg-[#1e2532] border border-surface-border rounded-xl shadow-xl overflow-hidden z-50 animate-fade-in origin-top-right";
+            
+            // 1. Share Profile (For Everyone)
+            const shareBtn = document.createElement('button');
+            shareBtn.className = "w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors";
+            shareBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">share</span> Share Profile';
+            shareBtn.onclick = () => copyProfileLink();
+            menuDropdown.appendChild(shareBtn);
+
+            // 2. Block User (Only for others)
+            if (!isOwner) {
+                const divider = document.createElement('div');
+                divider.className = "h-px bg-white/5 mx-2";
+                menuDropdown.appendChild(divider);
+
+                const blockBtn = document.createElement('button');
+                blockBtn.className = "w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-3 transition-colors";
+                blockBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">block</span> Block User';
+                blockBtn.onclick = () => blockUserProfile(user.id);
+                menuDropdown.appendChild(blockBtn);
+            }
+
+            buttonWrapper.appendChild(menuDropdown);
+            actionsContainer.appendChild(buttonWrapper);
+
+            // Close menu on outside click
+            document.addEventListener('click', (e) => {
+                if (!buttonWrapper.contains(e.target)) {
+                    document.getElementById('profile-action-menu')?.classList.add('hidden');
+                }
+            });
         }
 
         async function loadTabContent() {
@@ -802,6 +878,51 @@
                 }
 
             } catch (e) { console.error(e); }
+        }
+        
+        async function blockUserProfile(userId) {
+            if (!confirm("Are you sure you want to block this user? They will not be able to message you or see your posts.")) return;
+
+            try {
+                // Controller expects 'user_id'
+                const response = await fetch(`${API_BASE_URL}/block_user`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ user_id: userId })
+                });
+                
+                const result = await response.json();
+                
+                // Handle success based on API response structure
+                if (result.success || response.ok) {
+                    showToast('User blocked successfully', 'success');
+                    setTimeout(() => window.location.href = 'homefeed-dashboard.html', 1500);
+                } else {
+                    showToast(result.message || 'Failed to block user', 'error');
+                }
+            } catch (error) {
+                console.error("Block Error:", error);
+                showToast('An error occurred', 'error');
+            }
+        }
+
+        function copyProfileLink() {
+            // Construct explicit URL with ID to ensure it's correct even if current URL is clean
+            // Use targetUserId from global scope (defined at top of script)
+            const baseUrl = window.location.origin + window.location.pathname;
+            const fullUrl = `${baseUrl}?id=${targetUserId}`;
+            
+            navigator.clipboard.writeText(fullUrl).then(() => {
+                showToast('Profile link copied!', 'success');
+            }).catch(err => {
+                console.error('Failed to copy', err);
+                // Fallback for non-secure contexts (optional)
+                showToast('Failed to copy link', 'error');
+            });
         }
 
         function createReelFeedHTML(reel) {

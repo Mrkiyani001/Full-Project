@@ -16,10 +16,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 
+use App\Events\MessageStatusEvent;
+
 class MessageController extends BaseController
 {
     public function sendMessage(Request $request)
     {
+        Log::info('SendMessage HIT - Raw Request:', [
+            'all' => $request->all(),
+            'files_raw' => $request->allFiles(),
+            'has_attachments' => $request->hasFile('attachments'),
+        ]);
         $allowedMimes = 'jpg,jpeg,png,gif,webp,bmp,svg,heic,heif,pdf,doc,docx,xls,xlsx,csv,ppt,pptx,txt,rtf,json,mp4,avi,mov,wmv,flv,mkv,webm,3gp,mp3,wav,aac,ogg,m4a,wma,amr,zip,rar,7z';
         $this->validateRequest($request, [
             'receiver_id' => 'integer|required|exists:users,id',
@@ -28,14 +35,13 @@ class MessageController extends BaseController
             'attachments.*' => 'file|mimes:' . $allowedMimes . ',max:102400',
             'attachment' => 'array|nullable',
             'attachment.*' => 'file|mimes:' . $allowedMimes . ',max:102400',
-            // 'created_by' => 'integer|required|exists:users,id',
-            // 'updated_by' => 'integer|required|exists:users,id',
         ]);
         try {
             Log::info('SendMessage Request:', [
                 'all' => $request->all(),
-                'has_file' => $request->hasFile('attachments'),
-                'files' => $request->file('attachments')
+                'files_raw' => $request->allFiles(), // Check raw files
+                'has_file_attachments' => $request->hasFile('attachments'),
+                'has_file_attachment' => $request->hasFile('attachment'),
             ]);
             $user = auth('api')->user();
             if (!$user) {
@@ -94,6 +100,7 @@ class MessageController extends BaseController
                 }
                 RateLimiter::hit($key, 600);
             }
+            Log::info('Dispatching AddMessage with attachments:', ['attachments' => $attachments]);
             AddMessage::dispatch(
                 $Conversation->id,
                 $sender_Id,
@@ -148,7 +155,7 @@ class MessageController extends BaseController
             if (!$user) {
                 return $this->unauthorized();
             }
-            $message = Message::find($request->id);
+            $message = Message::withTrashed()->find($request->id);
             if (!$message) {
                 return $this->Response(false, 'Message not found', null, 404);
             }
@@ -184,6 +191,62 @@ class MessageController extends BaseController
             return $this->Response(false, $e->getMessage(), null, 500);
         }
     }
+    public function markAsDelivered(Request $request)
+    {
+        $this->validateRequest($request, [
+            'message_id' => 'required|integer|exists:messages,id'
+        ]);
+
+        try {
+            $user = auth('api')->user(); 
+            $message = Message::find($request->message_id);
+
+            // Only mark if I am receiver and status is sent
+            if ($message->receiver_id == $user->id && $message->status == 'sent') {
+                $message->status = 'delivered';
+                $message->save();
+
+                // Notify Sender
+                MessageStatusEvent::dispatch($message, 'delivered');
+                return $this->Response(true, 'Marked as delivered');
+            }
+            return $this->Response(true, 'No change needed');
+        } catch (Exception $e) {
+            return $this->Response(false, $e->getMessage(), null, 500);
+        }
+    }
+
+    public function markConversationAsRead(Request $request)
+    {
+        $this->validateRequest($request, [
+            'conversation_id' => 'required|integer|exists:conversations,id'
+        ]);
+
+        try {
+            $user = auth('api')->user(); 
+            
+            $lastMessage = Message::where('conversation_id', $request->conversation_id)
+                ->where('receiver_id', $user->id)
+                ->where('status', '!=', 'read')
+                ->latest()
+                ->first();
+
+            if ($lastMessage) {
+                 Message::where('conversation_id', $request->conversation_id)
+                    ->where('receiver_id', $user->id)
+                    ->where('status', '!=', 'read')
+                    ->update(['status' => 'read']);
+                
+                $lastMessage->refresh(); 
+                MessageStatusEvent::dispatch($lastMessage, 'read');
+                
+                return $this->Response(true, 'Marked as read');
+            }
+            return $this->Response(true, 'No unread messages');
+        } catch (Exception $e) {
+            return $this->Response(false, $e->getMessage(), null, 500);
+        }
+    }
     public function getMessages(Request $request)
     {
         $this->validateRequest($request, [
@@ -211,6 +274,7 @@ class MessageController extends BaseController
                 ->where('receiver_id', $sender_Id)
                 ->where('delete_from_receiver', false);
             })
+            ->with('attachments')
             ->orderBy('created_at', 'asc')
             ->get();
             if (!$Messages) {
@@ -238,25 +302,11 @@ class MessageController extends BaseController
             return $this->unauthorized();
         }
         // Create a list of IDs to exclude (users who blocked me OR users I blocked)
-        $blockedUserIds = BlockUser::where('blocker_id', $user->id)
-            ->orWhere('blocked_id', $user->id)
-            ->pluck('blocked_id', 'blocker_id')
-            ->map(function ($blocked, $blocker) use ($user) {
-                return $blocker == $user->id ? $blocked : $blocker;
-            })->unique()->values()->toArray();
+        // REMOVED FILTER to allow viewing blocked conversations as per new requirement
 
         $Conversation = Conversation::where(function ($q) use ($user) {
                 $q->where('sender_id', $user->id)
                   ->orWhere('receiver_id', $user->id);
-            })
-            // Exclude conversations where the other party is in the blocked list
-            ->where(function ($q) use ($blockedUserIds, $user) {
-               $q->whereNotIn('sender_id', $blockedUserIds)
-                 ->orWhere('sender_id', $user->id);
-            })
-            ->where(function ($q) use ($blockedUserIds, $user) {
-               $q->whereNotIn('receiver_id', $blockedUserIds)
-                 ->orWhere('receiver_id', $user->id);
             })
             ->with(['sender.profile.avatar', 'receiver.profile.avatar'])
             ->orderBy('updated_at', 'desc')
@@ -270,7 +320,55 @@ class MessageController extends BaseController
         return $this->Response(false, $e->getMessage(), null, 500);
     }
 }
+    public function clearconversation(Request $request){
+        $this->validateRequest($request, [
+            'id' => 'integer|required|exists:conversations,id',
+        ]);
+        try{
+            $user = auth('api')->user();
+            if (!$user) {
+                return $this->unauthorized();
+            }
+            $conversation = Conversation::find($request->id);
+            if (!$conversation) {
+                return $this->Response(false, 'Conversation not found', null, 404);
+            }
+            
+            // Iterate and update flags based on user role in each message
+            $conversation->messages()->chunk(100, function($messages) use ($user) {
+                foreach($messages as $message) {
+                    if ($message->sender_id == $user->id) {
+                        $message->update(['delete_from_sender' => true]);
+                    } elseif ($message->receiver_id == $user->id) {
+                        $message->update(['delete_from_receiver' => true]);
+                    }
+                }
+            });
 
+            return $this->Response(true, 'Chat cleared successfully');
+        }catch(Exception $e){
+            return $this->Response(false, $e->getMessage(), null, 500);
+        }
+    }
+public function deleteconversation(Request $request){
+    $this->validateRequest($request, [
+        'id' => 'integer|required|exists:conversations,id',
+    ]);
+    try{
+        $user = auth('api')->user();
+        if (!$user) {
+            return $this->unauthorized();
+        }
+        $conversation = Conversation::find($request->id);
+        if (!$conversation) {
+            return $this->Response(false, 'Conversation not found', null, 404);
+        }
+        $conversation->delete();
+        return $this->Response(true, 'Conversation deleted successfully');
+    }catch(Exception $e){
+        return $this->Response(false, $e->getMessage(), null, 500);
+    }
+}
 public function searchUsers(Request $request)
 {
     try{

@@ -21,7 +21,19 @@ class ConversationResource extends JsonResource
 
         $friend = ($this->sender_id == $user->id) ? $this->receiver : $this->sender;
 
-        $lastmessage = Message::withTrashed()->where('conversation_id', $this->id)->latest()->first();
+        $lastmessage = Message::withTrashed()
+            ->where('conversation_id', $this->id)
+            ->where(function ($q) use ($user) {
+                $q->where(function ($sub) use ($user) {
+                    $sub->where('sender_id', $user->id)
+                        ->where('delete_from_sender', false);
+                })->orWhere(function ($sub) use ($user) {
+                    $sub->where('receiver_id', $user->id)
+                        ->where('delete_from_receiver', false);
+                });
+            })
+            ->latest()
+            ->first();
 
         $unreadmessage = Message::where('conversation_id', $this->id)
             ->where('receiver_id', $user->id)
@@ -34,7 +46,7 @@ class ConversationResource extends JsonResource
             if ($lastmessage->deleted_at) {
                 $messageContent = 'This message was deleted';
             } else {
-                $messageContent = $lastmessage->message;
+                $messageContent = $lastmessage->message ?? 'Sent an attachment';
             }
         }
         if (!$friend) {
