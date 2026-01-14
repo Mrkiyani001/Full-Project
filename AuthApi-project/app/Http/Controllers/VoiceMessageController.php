@@ -79,24 +79,44 @@ catch(Exception $e){
 public function delvoiceMessage(Request $request){
     $this->validateRequest($request, [
         'id' => 'required|exists:voice_messages,id',
+        'delete_type' => 'required|in:me,everyone',
     ]);
     try{
         $user = auth('api')->user();
         if(!$user){
             return $this->Unauthorized();
         }
-        
-        $voicemsg = VoiceMessage::find($request->id);
+        $voicemsg = VoiceMessage::withTrashed()->find($request->id);
         if(!$voicemsg){
             return $this->Response(false, 'Voice message not found', null, 404);
         }
-
+        
         // Check ownership against the ACTUAL record, not the request input
-        if($user->id != $voicemsg->sender_id){
+        if($user->id != $voicemsg->sender_id && $user->id != $voicemsg->receiver_id){
              return $this->NotAllowed();
         }
+        if($request->delete_type == 'me'){
+            if($user->id == $voicemsg->sender_id){
+                $voicemsg->update([
+                    'delete_from_sender' => true,
+                ]);
+            }
+            if($user->id == $voicemsg->receiver_id){
+                $voicemsg->update([
+                    'delete_from_receiver' => true,
+                ]);
+            }
+        }elseif($request->delete_type == 'everyone') {
+            if($voicemsg->sender_id != $user->id){
+                return $this->NotAllowed();
+            }
+            $voicemsg->update([
+                'updated_by' => $user->id,
+                'deleted_at' => now(),
+            ]);
+            $voicemsg->delete();
+        }
 
-        $voicemsg->delete();
         return $this->Response(true, 'Voice message deleted successfully', null, 200);
     }
     catch(Exception $e){
@@ -124,7 +144,18 @@ public function getVoiceMessages(Request $request){
         if (!$Conversation) {
             return $this->Response(false, 'Conversation not found', null, 404);
         }
-        $voicemsg = VoiceMessage::where('conversation_id', $request->conversation_id)->get();
+        $voicemsg = VoiceMessage::where('conversation_id', $request->conversation_id)
+        ->where(function ($q) use ($sender_id) {
+            $q->where(function($q2) use ($sender_id){
+                $q2->where('sender_id', $sender_id)
+                ->where('delete_from_sender', false);
+            })
+            ->orWhere(function($q2) use ($sender_id){   // yaha pr hum ha receiver_id is lya ni use kiya bcz jo login kra ga jo hum na sender ka equal kiya ha
+                $q2->where('receiver_id', $sender_id)
+                ->where('delete_from_receiver', false);
+            });
+        })
+        ->get();
         return $this->Response(true, 'Voice message sent successfully', $voicemsg,200);
     }
     catch(Exception $e){
@@ -133,4 +164,3 @@ public function getVoiceMessages(Request $request){
     }
 }
 }
-

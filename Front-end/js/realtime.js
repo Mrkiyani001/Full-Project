@@ -13,16 +13,16 @@ async function setupRealtimeConfig() {
                 window.currentUserData = JSON.parse(stored);
                 if (window.currentUserData.id) {
                     console.log("Realtime: User data loaded from localStorage");
-                     proceedWithRealtime();
-                     return;
+                    proceedWithRealtime();
+                    return;
                 }
-            } catch(e) {}
+            } catch (e) { }
         }
 
         // 3. Active Fetch
         if (retryCount < MAX_RETRIES) {
-             console.log(`Realtime: Fetching user data... (${retryCount + 1}/${MAX_RETRIES})`);
-             try {
+            console.log(`Realtime: Fetching user data... (${retryCount + 1}/${MAX_RETRIES})`);
+            try {
                 const res = await fetch(`${API_BASE_URL}/getUser`, {
                     method: 'POST',
                     credentials: 'include',
@@ -36,13 +36,13 @@ async function setupRealtimeConfig() {
                     proceedWithRealtime();
                     return;
                 }
-             } catch(e) {
-                 console.error("Realtime: Fetch failed", e);
-             }
-             
-             retryCount++;
-             setTimeout(setupRealtimeConfig, 2000); // Retry fetch in 2s
-             return;
+            } catch (e) {
+                console.error("Realtime: Fetch failed", e);
+            }
+
+            retryCount++;
+            setTimeout(setupRealtimeConfig, 2000); // Retry fetch in 2s
+            return;
         }
         console.warn("Realtime skipped: Unable to get user data.");
         return;
@@ -137,21 +137,42 @@ function setupGlobalListeners() {
                 // But for safety, message.js usually handles the "Active Chat" check.
             }
         });
+
+    window.Echo.private(`chat.${window.currentUserData.id}`)
+        .listen('VoiceMsgEvent', (e) => {
+            console.log('Global: New Voice Message Received:', e);
+
+            // 1. Mark as Delivered (Global Action)
+            if (e.file && e.file.id) {
+                // Determine if I am the receiver
+                if (String(e.file.receiver_id) === String(window.currentUserData.id)) {
+                    markAsDeliveredGlobal(e.file.id, 'voice');
+                }
+            }
+
+            // 2. Show Toast (If NOT on message page)
+            const isOnMessagePage = window.location.pathname.includes('message.html');
+            if (!isOnMessagePage) {
+                if (window.showToast) {
+                    showToast(`New voice message from ${e.file.sender.name}`, 'success');
+                }
+            }
+        });
 }
 
-async function markAsDeliveredGlobal(messageId) {
+async function markAsDeliveredGlobal(messageId, type = 'text') {
     try {
         await fetch(`${API_BASE_URL}/message/delivered`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
+            headers: {
+                'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 'X-XSRF-TOKEN': decodeURIComponent(document.cookie.split('; ').find(row => row.startsWith('XSRF-TOKEN='))?.split('=')[1] || '')
             },
             credentials: 'include',
-            body: JSON.stringify({ message_id: messageId }) // Updated param name
+            body: JSON.stringify({ message_id: messageId, type: type })
         });
-        console.log("Global: Marked as delivered:", messageId);
+        console.log(`Global: Marked as delivered (${type}):`, messageId);
     } catch (e) {
         console.error("Global: Failed to mark delivered", e);
     }

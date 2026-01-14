@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Events\VoiceMsgEvent;
+use App\Models\Conversation; // Added
 use App\Models\VoiceMessage;
 use FFMpeg\FFMpeg;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -64,6 +65,15 @@ class AddVoiceMessage implements ShouldQueue
             'file_duration' => $duration,
         ]);
         VoiceMsgEvent::dispatch($this->file);
+
+        // Update Conversation Timestamp
+        $conversation = Conversation::find($this->conversation_id);
+        if ($conversation) {
+            $conversation->update([
+                'updated_at' => now(),
+            ]);
+        }
+
         Log::info("AddVoiceMessage Job Completed for User ID: {$this->user_id}");
         Log::info("Sending Notification");
         $this->file->load('sender'); // Ensure sender is loaded

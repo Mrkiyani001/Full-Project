@@ -12,6 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('voice_messages', function (Blueprint $table) {
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->boolean('delete_from_sender')->default(false);
             $table->boolean('delete_from_receiver')->default(false);
         });
@@ -23,6 +24,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('voice_messages', function (Blueprint $table) {
+            $table->dropColumn('updated_by');
             $table->dropColumn('delete_from_sender');
             $table->dropColumn('delete_from_receiver');
         });

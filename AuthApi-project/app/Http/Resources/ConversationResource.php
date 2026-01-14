@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\BlockUser;
 use App\Models\Message;
+use App\Models\VoiceMessage; // Added
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -35,20 +36,73 @@ class ConversationResource extends JsonResource
             ->latest()
             ->first();
 
+        // Check for Last Voice Message
+        $lastVoiceMessage = VoiceMessage::withTrashed()
+            ->where('conversation_id', $this->id)
+            ->where(function ($q) use ($user) {
+                $q->where(function ($sub) use ($user) {
+                    $sub->where('sender_id', $user->id)
+                        ->where('delete_from_sender', false);
+                })->orWhere(function ($sub) use ($user) {
+                    $sub->where('receiver_id', $user->id)
+                        ->where('delete_from_receiver', false);
+                });
+            })
+            ->latest()
+            ->first();
+
         $unreadmessage = Message::where('conversation_id', $this->id)
             ->where('receiver_id', $user->id)
             ->where('status', '!=', 'read')
             ->where('delete_from_receiver', false)
             ->count();
 
-        $messageContent = 'No message Yet';
-        if ($lastmessage) {
-            if ($lastmessage->deleted_at) {
-                $messageContent = 'This message was deleted';
+        // Add unread voice count
+        $unreadVoice = VoiceMessage::where('conversation_id', $this->id)
+            ->where('receiver_id', $user->id)
+            ->where('status', '!=', 'read')
+            ->where('delete_from_receiver', false)
+            ->count();
+
+        $totalUnread = $unreadmessage + $unreadVoice;
+
+        // Determine true last message
+        $finalLastMessage = null;
+        $messageType = 'text';
+
+        if ($lastmessage && $lastVoiceMessage) {
+            if ($lastVoiceMessage->created_at > $lastmessage->created_at) {
+                $finalLastMessage = $lastVoiceMessage;
+                $messageType = 'voice';
             } else {
-                $messageContent = $lastmessage->message ?? 'Sent an attachment';
+                $finalLastMessage = $lastmessage;
+                $messageType = 'text';
+            }
+        } elseif ($lastVoiceMessage) {
+            $finalLastMessage = $lastVoiceMessage;
+            $messageType = 'voice';
+        } else {
+            $finalLastMessage = $lastmessage;
+            $messageType = 'text';
+        }
+
+        $messageContent = 'No message Yet';
+        $messageDuration = null;
+
+        if ($finalLastMessage) {
+            if ($finalLastMessage->deleted_at) {
+                $messageContent = 'This message was deleted';
+                $messageType = 'deleted';
+            } else {
+                if ($messageType === 'voice') {
+                    $messageContent = 'Voice Message';
+                    $messageDuration = $finalLastMessage->file_duration;
+                } else {
+                    $messageContent = $finalLastMessage->message ?? 'Sent an attachment';
+                }
             }
         }
+
         if (!$friend) {
             return [
                 'id' => $this->id,
@@ -56,8 +110,10 @@ class ConversationResource extends JsonResource
                 'friend_name' => 'Deleted User',
                 'friend_avatar' => null,
                 'last_message' => $messageContent,
-                'last_message_time' => $lastmessage ? $lastmessage->created_at->diffForHumans() : '',
-                'unread_message' => $unreadmessage,
+                'last_message_type' => $messageType, // Added
+                'last_message_duration' => $messageDuration, // Added
+                'last_message_time' => $finalLastMessage ? $finalLastMessage->created_at->toIso8601String() : '', // Changed to ISO
+                'unread_message' => $totalUnread,
                 'is_blocked' => false,
                 'is_blocked_by' => false,
             ];
@@ -79,8 +135,10 @@ class ConversationResource extends JsonResource
             // Accessor handling or manual fallback
             'friend_avatar' => $friend->profile ? ($friend->profile->avatar ? url($friend->profile->avatar) : null) : null,
             'last_message' => $messageContent,
-            'last_message_time' => $lastmessage ? $lastmessage->created_at->diffForHumans() : '',
-            'unread_message' => $unreadmessage,
+            'last_message_type' => $messageType, // Added
+            'last_message_duration' => $messageDuration, // Added
+            'last_message_time' => $finalLastMessage ? $finalLastMessage->created_at->toIso8601String() : '', // Changed to ISO
+            'unread_message' => $totalUnread,
             'is_blocked' => $checkblocked,
             'is_blocked_by' => $checkblockedby,
         ];

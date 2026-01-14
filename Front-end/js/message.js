@@ -1,6 +1,6 @@
 // --- State Management ---
 let activeChatUser = null;
-let activeOpenChatUserId = null; 
+let activeOpenChatUserId = null;
 let conversations = [];
 let echoInstance = null;
 let filesQueue = []; // Global File Queue
@@ -56,24 +56,24 @@ function handleFileSelect(event) {
         // Add to queue
         filesQueue = [...filesQueue, ...newFiles];
         renderFilePreviews();
-        
+
         // DEBUG TOAST
         showToast(`Files added: ${newFiles.length}. Queue size: ${filesQueue.length}`, 'success');
 
         // Hide menu
         const menu = document.getElementById('media-menu');
-        if(menu) menu.classList.add('hidden');
+        if (menu) menu.classList.add('hidden');
 
         // Enable Send Button
         const sendBtn = document.querySelector('#message-form button[type="submit"]');
-        if(sendBtn) sendBtn.disabled = false;
-        if(sendBtn) sendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        if (sendBtn) sendBtn.disabled = false;
+        if (sendBtn) sendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
     }
 }
 
 function renderFilePreviews() {
     const previewArea = document.getElementById('file-preview-area');
-    
+
     if (filesQueue.length > 0) {
         previewArea.classList.remove('hidden');
         previewArea.innerHTML = '';
@@ -82,7 +82,7 @@ function renderFilePreviews() {
             const div = document.createElement('div');
             div.className = 'relative shrink-0 w-16 h-16 bg-surface-border rounded-lg overflow-hidden flex items-center justify-center border border-white/5 group/file';
 
-             // Remove Button
+            // Remove Button
             const removeBtn = document.createElement('button');
             removeBtn.className = 'absolute top-0.5 right-0.5 w-5 h-5 bg-black/50 hover:bg-black/80 rounded-full text-white flex items-center justify-center z-10 transition-colors backdrop-blur-sm opacity-0 group-hover/file:opacity-100';
             removeBtn.innerHTML = '<span class="material-symbols-outlined text-[14px]">close</span>';
@@ -100,7 +100,7 @@ function renderFilePreviews() {
                 img.className = 'w-full h-full object-cover';
                 div.appendChild(img);
             } else {
-                 div.innerHTML = `
+                div.innerHTML = `
                     <div class="flex flex-col items-center justify-center p-1">
                         <span class="material-symbols-outlined text-white/50 text-2xl">description</span>
                         <span class="text-[8px] text-white/50 truncate w-full text-center mt-1">${file.name.split('.').pop().toUpperCase()}</span>
@@ -316,7 +316,7 @@ async function openChat(user) {
             msgInput.disabled = false;
             msgInput.placeholder = "Type a message...";
         }
-        
+
         const actionsBtn = document.getElementById('chat-actions-btn');
         if (actionsBtn) actionsBtn.classList.remove('hidden');
 
@@ -415,36 +415,36 @@ async function loadMessages(receiverId) {
     // 2. Parallel Fetch (Texts + Voice)
     try {
         const [textRes, voiceRes] = await Promise.all([
-             fetch(`${API_BASE_URL}/fetch_messages`, {
+            fetch(`${API_BASE_URL}/fetch_messages`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({ receiver_id: receiverId })
-             }),
-             fetch(`${API_BASE_URL}/getvoicemsg`, {
+            }),
+            fetch(`${API_BASE_URL}/getvoicemsg`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     receiver_id: receiverId,
                     conversation_id: activeChatUser.id // Send conversation ID if available
                 })
-             })
+            })
         ]);
 
         const textResult = await textRes.json();
         const voiceResult = await voiceRes.json();
-        
+
         // Arrays
         let texts = textResult.success ? textResult.data : [];
         let voices = voiceResult.success ? voiceResult.data : [];
-        
+
         // Normalize Voice Messages to look like Messages for Rendering
         voices = voices.map(v => ({
             ...v,
             type: 'voice',
-            message: null, 
-            attachments: [] 
+            message: null,
+            attachments: []
         }));
 
         // Merge & Sort
@@ -480,7 +480,7 @@ async function sendMessage() {
 
     const input = document.getElementById('message-input');
     const text = input.value.trim();
-    
+
     // Use global filesQueue for validation
     if (!text && filesQueue.length === 0) return;
 
@@ -529,7 +529,7 @@ async function sendMessage() {
     formData.append('receiver_id', receiverId);
     if (text) formData.append('message', text);
 
-// Append files from Queue
+    // Append files from Queue
     filesQueue.forEach(file => {
         formData.append('attachments[]', file);
     });
@@ -541,7 +541,7 @@ async function sendMessage() {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
-    
+
     // Clear Queue
     filesQueue = [];
     renderFilePreviews();
@@ -552,7 +552,7 @@ async function sendMessage() {
             method: 'POST',
             credentials: 'include',
             headers: {
-                 // Explicitly DO NOT set Content-Type for FormData, browser does it
+                // Explicitly DO NOT set Content-Type for FormData, browser does it
             },
             body: formData
         });
@@ -588,7 +588,7 @@ async function openCamera() {
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
         }
-        
+
         const constraints = {
             video: {
                 facingMode: currentFacingMode
@@ -599,12 +599,12 @@ async function openCamera() {
         stream = await navigator.mediaDevices.getUserMedia(constraints);
         const video = document.getElementById('camera-stream');
         video.srcObject = stream;
-        
+
         // Reset Recording UI
         document.getElementById('recording-indicator').classList.add('hidden');
         document.getElementById('record-btn').innerHTML = '<span class="material-symbols-outlined text-2xl">videocam</span>';
         isRecording = false;
-        
+
     } catch (err) {
         console.error("Camera Error:", err);
         showToast("Could not access camera/microphone", "error");
@@ -616,10 +616,10 @@ function closeCamera() {
     if (isRecording) {
         stopRecording();
     }
-    
+
     const modal = document.getElementById('camera-modal');
     modal.classList.add('hidden');
-    
+
     if (stream) {
         stream.getTracks().forEach(track => track.stop());
         stream = null;
@@ -634,7 +634,7 @@ async function switchCamera() {
 
 function capturePhoto() {
     if (isRecording) return; // Don't snap while recording
-    
+
     const video = document.getElementById('camera-stream');
     const canvas = document.getElementById('camera-canvas');
     const context = canvas.getContext('2d');
@@ -647,11 +647,11 @@ function capturePhoto() {
         canvas.toBlob(blob => {
             const fileName = `camera_${Date.now()}.jpg`;
             const file = new File([blob], fileName, { type: 'image/jpeg' });
-            
+
             // Add to global queue
             filesQueue.push(file);
             renderFilePreviews();
-            
+
             closeCamera();
         }, 'image/jpeg', 0.9);
     }
@@ -712,7 +712,7 @@ function renderFilePreviews() {
                 playIcon.innerHTML = '<span class="material-symbols-outlined text-white/80 text-xl drop-shadow-md">play_circle</span>';
                 div.appendChild(playIcon);
             } else {
-                 div.innerHTML = `
+                div.innerHTML = `
                     <div class="flex flex-col items-center justify-center p-1">
                         <span class="material-symbols-outlined text-white/50 text-2xl">description</span>
                         <span class="text-[8px] text-white/50 truncate w-full text-center mt-1">${file.name.split('.').pop().toUpperCase()}</span>
@@ -734,7 +734,7 @@ function updateSendButtonState() {
     const input = document.getElementById('message-input');
     const sendBtn = document.getElementById('send-btn');
     const micBtn = document.getElementById('mic-btn');
-    
+
     if (!input || !sendBtn || !micBtn) return;
 
     const hasText = input.value.trim().length > 0;
@@ -751,7 +751,7 @@ function updateSendButtonState() {
         sendBtn.classList.add('hidden');
         micBtn.classList.remove('hidden');
         // Reset Send Button state just in case
-        sendBtn.disabled = true; 
+        sendBtn.disabled = true;
     }
 }
 
@@ -774,12 +774,12 @@ async function startRecording() {
 
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
+
         voiceMimeType = 'audio/webm';
         if (!MediaRecorder.isTypeSupported('audio/webm')) {
-             if (MediaRecorder.isTypeSupported('audio/mp4')) voiceMimeType = 'audio/mp4';
-             else if (MediaRecorder.isTypeSupported('audio/ogg')) voiceMimeType = 'audio/ogg';
-             else voiceMimeType = ''; 
+            if (MediaRecorder.isTypeSupported('audio/mp4')) voiceMimeType = 'audio/mp4';
+            else if (MediaRecorder.isTypeSupported('audio/ogg')) voiceMimeType = 'audio/ogg';
+            else voiceMimeType = '';
         }
 
         const options = voiceMimeType ? { mimeType: voiceMimeType } : {};
@@ -791,7 +791,7 @@ async function startRecording() {
         };
 
         voiceRecorder.onstop = () => {
-             stream.getTracks().forEach(track => track.stop());
+            stream.getTracks().forEach(track => track.stop());
         };
 
         voiceRecorder.start();
@@ -801,26 +801,26 @@ async function startRecording() {
         const ui = document.getElementById('recording-ui');
         ui.classList.remove('hidden');
         ui.classList.add('flex');
-        
+
         document.getElementById('recording-active').classList.remove('hidden');
         document.getElementById('recording-review').classList.add('hidden');
-        
+
         // Hide Play Icon reset
         resetPlayIcon();
 
         // Timer
         voiceStartTime = Date.now();
-        const timerEl = document.getElementById('recording-timer');
+        const timerEl = document.getElementById('voice-recording-timer');
         if (timerEl) timerEl.innerText = "00:00";
-        
+
         // Clear any existing interval
         if (voiceInterval) clearInterval(voiceInterval);
-        
+
         voiceInterval = setInterval(() => {
             const elapsed = Math.floor((Date.now() - voiceStartTime) / 1000);
             const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
             const secs = String(elapsed % 60).padStart(2, '0');
-            const el = document.getElementById('recording-timer');
+            const el = document.getElementById('voice-recording-timer');
             if (el) {
                 el.innerText = `${mins}:${secs}`;
             }
@@ -844,36 +844,36 @@ function stopRecording() {
     clearInterval(voiceInterval); // Stop timer immediately
 
     voiceRecorder.onstop = () => {
-         const type = voiceMimeType || 'audio/webm';
-         voiceBlob = new Blob(voiceChunks, { type: type });
-         
-         console.log("Recording Ready for Review. Size:", voiceBlob.size);
-         
-         if (voiceBlob.size === 0) {
-             showToast("Recording empty", "error");
-             discardRecording();
-             return;
-         }
+        const type = voiceMimeType || 'audio/webm';
+        voiceBlob = new Blob(voiceChunks, { type: type });
 
-         // Switch UI to Review Mode
-         document.getElementById('recording-active').classList.add('hidden');
-         document.getElementById('recording-review').classList.remove('hidden');
-         document.getElementById('recording-review').classList.add('flex'); 
-         
-         // Setup Audio Preview
-         const audio = document.getElementById('audio-preview');
-         const url = URL.createObjectURL(voiceBlob);
-         audio.src = url;
-         audio.load();
+        console.log("Recording Ready for Review. Size:", voiceBlob.size);
+
+        if (voiceBlob.size === 0) {
+            showToast("Recording empty", "error");
+            discardRecording();
+            return;
+        }
+
+        // Switch UI to Review Mode
+        document.getElementById('recording-active').classList.add('hidden');
+        document.getElementById('recording-review').classList.remove('hidden');
+        document.getElementById('recording-review').classList.add('flex');
+
+        // Setup Audio Preview
+        const audio = document.getElementById('audio-preview');
+        const url = URL.createObjectURL(voiceBlob);
+        audio.src = url;
+        audio.load();
     };
-    
+
     voiceRecorder.stop();
 }
 
 function togglePlayUrl() {
     const audio = document.getElementById('audio-preview');
     const icon = document.getElementById('play-icon');
-    
+
     if (audio.paused) {
         audio.play().then(() => {
             icon.innerText = 'pause';
@@ -889,13 +889,13 @@ function resetPlayIcon() {
     const icon = document.getElementById('play-icon');
     if (icon) icon.innerText = 'play_arrow';
     const bar = document.getElementById('audio-progress');
-    if(bar) bar.style.width = '0%';
+    if (bar) bar.style.width = '0%';
 }
 
 function animateProgress() {
     const audio = document.getElementById('audio-preview');
     const bar = document.getElementById('audio-progress');
-    
+
     function step() {
         if (!audio.paused && !audio.ended) {
             const pct = (audio.currentTime / audio.duration) * 100;
@@ -911,7 +911,7 @@ function animateProgress() {
 
 function discardRecording() {
     const audio = document.getElementById('audio-preview');
-    if(audio) {
+    if (audio) {
         audio.pause();
         audio.src = '';
     }
@@ -921,10 +921,10 @@ function discardRecording() {
 
 async function uploadRecording() {
     if (!voiceBlob) return;
-    
+
     // Disable send button to prevent double tap
     const btn = document.querySelector('#recording-review button[onclick="uploadRecording()"]');
-    if(btn) btn.disabled = true;
+    if (btn) btn.disabled = true;
 
     // Extension
     let ext = 'webm';
@@ -933,24 +933,24 @@ async function uploadRecording() {
 
     const filename = `voice_msg_${Date.now()}.${ext}`;
     const file = new File([voiceBlob], filename, { type: voiceBlob.type });
-    
+
     await uploadVoiceMessage(file, voiceDuration);
-    
+
     discardRecording();
-    if(btn) btn.disabled = false;
+    if (btn) btn.disabled = false;
 }
 
 function resetRecordingUI() {
     clearInterval(voiceInterval);
     document.getElementById('recording-ui').classList.add('hidden');
     document.getElementById('recording-ui').classList.remove('flex');
-    
+
     // Reset Buttons
     document.getElementById('mic-btn').classList.remove('hidden');
-    
+
     // Check if input has text to show Send, else keep hidden
     updateSendButtonState();
-    
+
     voiceRecorder = null;
     voiceChunks = [];
     voiceBlob = null;
@@ -958,33 +958,33 @@ function resetRecordingUI() {
 
 async function uploadVoiceMessage(file, duration) {
     if (!activeChatUser) return;
-    
+
     const formData = new FormData();
     const receiverId = activeChatUser.friend_id || activeChatUser.id;
-    const conversationId = activeChatUser.friend_id ? activeChatUser.id : null; 
+    const conversationId = activeChatUser.friend_id ? activeChatUser.id : null;
 
     formData.append('receiver_id', receiverId);
     if (conversationId) formData.append('conversation_id', conversationId);
-    
+
     formData.append('file', file);
     formData.append('duration', duration);
 
     try {
         const response = await fetch(`${API_BASE_URL}/voicemsg`, {
-             method: 'POST',
-             headers: { 'Accept': 'application/json' },
-             credentials: 'include',
-             body: formData
+            method: 'POST',
+            headers: { 'Accept': 'application/json' },
+            credentials: 'include',
+            body: formData
         });
         const result = await response.json();
         if (result.success) {
-             showToast('Voice message sent', 'success');
-             loadConversations();
+            showToast('Voice message sent', 'success');
+            loadConversations();
         } else {
-             console.error("Upload failed:", result);
-             showToast(result.message || 'Failed to send voice', 'error');
+            console.error("Upload failed:", result);
+            showToast(result.message || 'Failed to send voice', 'error');
         }
-    } catch(e) {
+    } catch (e) {
         console.error("Upload error:", e);
         showToast('Error uploading voice', 'error');
     }
@@ -1014,6 +1014,21 @@ function renderConversations() {
 
         const avatar = conv.friend_avatar ? `${API_BASE_URL.replace('/api', '')}/${conv.friend_avatar}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(conv.friend_name)}&background=random`;
 
+        const timeString = formatTimeDynamic(conv.last_message_time);
+        
+        // Preview Header
+        let previewHtml = `<p class="text-[#9da5b9] text-sm truncate pr-2 ${conv.unread_message > 0 ? 'font-bold text-white' : ''}">`;
+        
+        if (conv.last_message_type === 'voice') {
+             const dur = formatDuration(conv.last_message_duration);
+             previewHtml += `<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">mic</span> ${dur}</span>`;
+        } else if (conv.last_message_type === 'deleted') {
+              previewHtml += `<span class="flex items-center gap-1 italic"><span class="material-symbols-outlined text-[16px]">block</span> Message deleted</span>`;
+        } else {
+             previewHtml += conv.last_message;
+        }
+        previewHtml += `</p>`;
+
         el.innerHTML = `
             <div class="relative shrink-0">
                 <div class="bg-center bg-no-repeat bg-cover rounded-full h-12 w-12" style="background-image: url('${avatar}')"></div>
@@ -1022,16 +1037,34 @@ function renderConversations() {
             <div class="flex flex-col flex-1 min-w-0">
                 <div class="flex justify-between items-baseline mb-0.5">
                     <h3 class="text-white text-sm font-semibold truncate">${conv.friend_name}</h3>
-                    <span class="text-[#9da5b9] text-xs font-normal whitespace-nowrap">${formatTime(conv.last_message_time)}</span>
+                    <span class="text-[#9da5b9] text-xs font-normal whitespace-nowrap">${timeString}</span>
                 </div>
                 <div class="flex justify-between items-center">
-                    <p class="text-[#9da5b9] text-sm truncate pr-2 ${conv.unread_message > 0 ? 'font-bold text-white' : ''}">${conv.last_message}</p>
+                    ${previewHtml}
                     ${conv.unread_message > 0 ? `<span class="bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">${conv.unread_message}</span>` : ''}
                 </div>
             </div>
         `;
         list.appendChild(el);
     });
+}
+
+function formatTimeDynamic(isoString) {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffPosts = (now - date) / 1000; // seconds
+
+    if (diffPosts < 60) return 'Just now';
+    if (diffPosts < 3600) return Math.floor(diffPosts / 60) + 'm';
+    if (diffPosts < 86400) {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    if (diffPosts < 604800) { // 7 days
+         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+         return days[date.getDay()];
+    }
+    return date.toLocaleDateString();
 }
 
 function appendMessage(msg) {
@@ -1042,12 +1075,17 @@ function appendMessage(msg) {
 
     const container = document.getElementById('messages-container');
     const isMe = msg.sender_id == currentUserData.id;
-    
+
+    // Normalization: Backend sends 'file_duration', existing valid msg might use 'duration'
+    if (!msg.duration && msg.file_duration) {
+        msg.duration = msg.file_duration;
+    }
+
     // Check if deleted
-    const isDeleted = msg.is_deleted_everyone || msg.message === "This message was deleted"; 
+    const isDeleted = msg.is_deleted_everyone || msg.message === "This message was deleted";
 
     const wrapper = document.createElement('div');
-    wrapper.id = `msg-${msg.id}-${msg.type || 'text'}`; 
+    wrapper.id = `msg-${msg.id}-${msg.type || 'text'}`;
     wrapper.className = isMe
         ? 'flex flex-col items-end gap-1 ml-auto max-w-[80%]'
         : 'flex items-end gap-3 max-w-[80%]';
@@ -1056,52 +1094,67 @@ function appendMessage(msg) {
     if (!isMe) {
         const headerAvatar = document.getElementById('chat-header-avatar');
         if (headerAvatar) {
-             const style = headerAvatar.style.backgroundImage;
-             const avatarHtml = `<div class="bg-center bg-no-repeat bg-cover rounded-full h-8 w-8 shrink-0 mb-1" style="${style}"></div>`;
-             wrapper.insertAdjacentHTML('afterbegin', avatarHtml); 
+            const style = headerAvatar.style.backgroundImage;
+            const avatarHtml = `<div class="bg-center bg-no-repeat bg-cover rounded-full h-8 w-8 shrink-0 mb-1" style="${style}"></div>`;
+            wrapper.insertAdjacentHTML('afterbegin', avatarHtml);
         }
     }
 
     // Content Bubble
     let contentHtml = '';
-    
+
     // --- VOICE MESSAGE ---
     if (msg.type === 'voice' || (msg.file_path && msg.duration)) {
         // file_path already includes 'storage/voice_messages/...'
-        const url = `${API_BASE_URL.replace('/api', '')}/${msg.file_path}`; 
-        
+        const url = `${API_BASE_URL.replace('/api', '')}/${msg.file_path}`;
+
         const durationDisplay = formatDuration(msg.duration);
         const uniqueId = `voice-${msg.id}`;
 
         contentHtml = `
-            <div class="flex items-center gap-3 p-3 rounded-2xl ${isMe ? 'bg-primary text-white rounded-br-none' : 'bg-surface-border text-white rounded-bl-none'} shadow-sm min-w-[200px]">
-                <button id="btn-${uniqueId}" onclick="playVoice('${url}', '${uniqueId}')" class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors shrink-0">
-                    <span class="material-symbols-outlined text-[24px]">play_arrow</span>
+            <div class="relative flex items-center gap-3 p-3.5 rounded-3xl min-w-[220px] transition-all duration-200 
+                ${isMe 
+                    ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white rounded-br-lg shadow-lg shadow-indigo-500/20' 
+                    : 'bg-[#1E232F] text-slate-200 border border-white/5 rounded-bl-lg shadow-sm'}">
+                
+                <!-- Play/Pause Button -->
+                <button id="btn-${uniqueId}" onclick="playVoice('${url}', '${uniqueId}')" 
+                    class="group relative w-11 h-11 rounded-full flex items-center justify-center transition-all shrink-0 
+                    ${isMe ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400'}">
+                    <span class="material-symbols-outlined text-[26px] drop-shadow-sm transition-transform group-active:scale-90">play_arrow</span>
                 </button>
-                <div class="flex flex-col gap-1 flex-1 min-w-0">
-                    <div class="h-1 bg-black/20 rounded-full overflow-hidden w-full">
-                        <div id="progress-${uniqueId}" class="h-full bg-white/80 w-0 transition-all duration-100"></div>
+                
+                <!-- Waveform / Progress Area -->
+                <div class="flex flex-col gap-1.5 flex-1 min-w-0 pr-1">
+                    <!-- Progress Bar -->
+                    <div class="h-1.5 rounded-full overflow-hidden w-full ${isMe ? 'bg-black/20' : 'bg-white/5'}">
+                        <div id="progress-${uniqueId}" class="h-full rounded-full transition-all duration-100 ${isMe ? 'bg-white' : 'bg-indigo-500'} w-0"></div>
                     </div>
-                    <span class="text-[10px] opacity-70 font-mono tracking-wider">${durationDisplay}</span>
+                    
+                    <!-- Meta Info: Duration & Status -->
+                    <div class="flex justify-between items-center px-0.5">
+                        <span class="text-[11px] font-medium tracking-wide font-mono ${isMe ? 'text-white/80' : 'text-slate-400'}">${durationDisplay}</span>
+                    </div>
                 </div>
+
                 <!-- Hidden Audio Tag -->
                 <audio id="audio-${uniqueId}" src="${url}" onended="resetVoiceUI('${uniqueId}')" ontimeupdate="updateVoiceProgress('${uniqueId}')"></audio>
             </div>
         `;
-    } 
+    }
     // --- TEXT / ATTACHMENT MESSAGE ---
     else {
         // Attachments
         if (!isDeleted && msg.attachments && msg.attachments.length > 0) {
             const isMultiple = msg.attachments.length > 1;
             const gridClass = isMultiple ? 'grid grid-cols-2 gap-1.5' : 'flex flex-col gap-1.5';
-            
+
             contentHtml += `<div class="${gridClass} mb-2 mt-1">`;
             msg.attachments.forEach(att => {
                 const url = `${API_BASE_URL.replace('/api', '')}/storage/Messages/${att.file_name}`;
                 const isSingle = !isMultiple;
                 const sizeClass = isSingle ? 'w-64 h-48 sm:w-72 sm:h-56' : 'w-32 h-32 sm:w-40 sm:h-40';
-                
+
                 if (att.file_type === 'image') {
                     contentHtml += `<div class="relative ${sizeClass} rounded-2xl overflow-hidden border border-white/10 cursor-pointer group bg-black/20" onclick="viewMedia('${url}', 'image')"><img src="${url}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>`;
                 } else if (att.file_type === 'video') {
@@ -1112,45 +1165,48 @@ function appendMessage(msg) {
             });
             contentHtml += `</div>`;
         }
-        
+
         // Text Content
         if (msg.message) {
-             const bubbleClass = isMe 
-                ? 'bg-primary text-white rounded-2xl rounded-tr-none px-4 py-2.5 shadow-sm' 
+            const bubbleClass = isMe
+                ? 'bg-primary text-white rounded-2xl rounded-tr-none px-4 py-2.5 shadow-sm'
                 : 'bg-surface-border text-white rounded-2xl rounded-tl-none px-4 py-2.5 shadow-sm';
-             
-             if (isDeleted) {
-                 contentHtml += `<div class="italic text-slate-400 text-sm border border-white/10 px-3 py-2 rounded-xl flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">block</span> Message deleted</div>`;
-             } else {
-                 contentHtml += `<div class="${bubbleClass} text-[15px] leading-relaxed break-words whitespace-pre-wrap">${msg.message} ${(msg.is_edited ? '<span class="text-[9px] opacity-70 ml-1">(edited)</span>' : '')}</div>`;
-             }
+
+            if (isDeleted) {
+                contentHtml += `<div class="italic text-slate-400 text-sm border border-white/10 px-3 py-2 rounded-xl flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">block</span> Message deleted</div>`;
+            } else {
+                contentHtml += `<div class="${bubbleClass} text-[15px] leading-relaxed break-words whitespace-pre-wrap">${msg.message} ${(msg.is_edited ? '<span class="text-[9px] opacity-70 ml-1">(edited)</span>' : '')}</div>`;
+            }
         }
     }
 
     const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     let metaHtml = `<div class="flex items-center gap-1 mt-0.5 ${isMe ? 'opacity-70' : 'opacity-50'}">
         <span class="text-[10px]">${time}</span>`;
-    
+
     if (isMe) {
-        let statusIcon = 'done'; 
-        let statusColor = 'text-white/70'; 
-        if (msg.status === 'delivered') { statusIcon = 'done_all'; } 
-        else if (msg.status === 'read') { statusIcon = 'done_all'; statusColor = 'text-blue-300'; } 
-        metaHtml += `<span class="material-symbols-outlined text-[14px] ${statusColor}">${statusIcon}</span>`;
+        let statusIcon = 'done';
+        let statusColor = 'text-white/70';
+        if (msg.status === 'delivered') { statusIcon = 'done_all'; }
+        else if (msg.status === 'read') { statusIcon = 'done_all'; statusColor = 'text-blue-300'; }
+
+        // Use different ID for voice to prevent collision if IDs overlap between tables
+        const statusId = (msg.type === 'voice' || msg.file_path) ? `status-voice-${msg.id}` : `status-${msg.id}`;
+        metaHtml += `<span id="${statusId}" class="material-symbols-outlined text-[14px] ${statusColor}">${statusIcon}</span>`;
     }
     metaHtml += `</div>`;
 
     const innerWrapper = document.createElement('div');
     innerWrapper.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'}`;
     innerWrapper.innerHTML = contentHtml + metaHtml;
-    
+
     wrapper.appendChild(innerWrapper);
     container.appendChild(wrapper);
 }
 
 // Helper: Format Duration (seconds -> 00:00)
 function formatDuration(seconds) {
-    if(!seconds) return '00:00';
+    if (!seconds) return '00:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
@@ -1162,13 +1218,13 @@ let currentAudioId = null;
 function playVoice(url, uniqueId) {
     const audio = document.getElementById(`audio-${uniqueId}`);
     const btn = document.getElementById(`btn-${uniqueId}`);
-    
+
     if (!audio) return;
 
     // Stop Other Audios
     if (currentAudioId && currentAudioId !== uniqueId) {
         const otherAudio = document.getElementById(`audio-${currentAudioId}`);
-        if(otherAudio) {
+        if (otherAudio) {
             otherAudio.pause();
             otherAudio.currentTime = 0;
             resetVoiceUI(currentAudioId);
@@ -1189,7 +1245,7 @@ function playVoice(url, uniqueId) {
 function updateVoiceProgress(uniqueId) {
     const audio = document.getElementById(`audio-${uniqueId}`);
     const bar = document.getElementById(`progress-${uniqueId}`);
-    if(audio && bar) {
+    if (audio && bar) {
         const pct = (audio.currentTime / audio.duration) * 100;
         bar.style.width = `${pct}%`;
     }
@@ -1198,8 +1254,8 @@ function updateVoiceProgress(uniqueId) {
 function resetVoiceUI(uniqueId) {
     const btn = document.getElementById(`btn-${uniqueId}`);
     const bar = document.getElementById(`progress-${uniqueId}`);
-    if(btn) btn.innerHTML = '<span class="material-symbols-outlined text-[24px]">play_arrow</span>';
-    if(bar) bar.style.width = '0%';
+    if (btn) btn.innerHTML = '<span class="material-symbols-outlined text-[24px]">play_arrow</span>';
+    if (bar) bar.style.width = '0%';
     currentAudioId = null;
 }
 
@@ -1362,7 +1418,7 @@ document.addEventListener('click', (e) => {
     const chatBtn = document.getElementById('chat-actions-btn'); // ID needs to be added to HTML button if not present, check HTML.
     // Actually the button has onclick="toggleChatActions()" but finding it by selector is safer.
     const chatBtnEl = document.querySelector('button[onclick="toggleChatActions()"]');
-    
+
     if (chatMenu && !chatMenu.classList.contains('hidden') && !chatMenu.contains(e.target) && (!chatBtnEl || !chatBtnEl.contains(e.target))) {
         chatMenu.classList.add('hidden');
     }
@@ -1649,6 +1705,66 @@ function setupRealtime() {
                 // 3. Refresh lists
                 loadConversations();
             })
+            .listen('VoiceMsgEvent', (e) => {
+                console.log('New Voice Message Received:', e);
+
+                // 1. Auto-mark as Delivered
+                if (e.file && e.file.id) {
+                    markAsDelivered(e.file.id, 'voice');
+                }
+
+                // Normalization
+                const msg = {
+                    ...e.file,
+                    type: 'voice',
+                    message: null,
+                    attachments: []
+                };
+
+                // 2. Append to chat if open
+                const isIncoming = activeOpenChatUserId && String(activeOpenChatUserId) === String(msg.sender_id);
+                const isOutgoing = activeOpenChatUserId && String(currentUserData.id) === String(msg.sender_id) && String(activeOpenChatUserId) === String(msg.receiver_id);
+
+                if (isIncoming || isOutgoing) {
+                    appendMessage(msg);
+                    scrollToBottom();
+
+                    // Update Cache
+                    const cacheKey = `chat_msg_v2_${currentUserData.id}_${activeOpenChatUserId}`; // Ensure V2 key is used or match loadMessages logic
+                    // Note: loadMessages uses v2 key.
+                    // But in MessagesEvent above I saw `chat_msg_...` (v1? or inconsistent?)
+                    // Let's stick to appending to UI which is most important.
+
+                    // If INCOMING, mark as READ
+                    if (isIncoming) {
+                        setTimeout(() => {
+                            fetch(`${API_BASE_URL}/conversation/read`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ conversation_id: msg.sender_id })
+                            }).catch(console.error);
+                        }, 500);
+                    }
+                } else {
+                    showToast(`New voice message from ${msg.sender.name}`, 'success');
+                }
+                loadConversations();
+            })
+            // Listen for Voice Message Status Updates
+            .listen('VoiceMessageStatusEvent', (e) => {
+                console.log('Voice Status Update:', e);
+                const statusSpan = document.getElementById(`status-voice-${e.id}`);
+                if (statusSpan) {
+                    if (e.status === 'delivered') {
+                        statusSpan.innerText = 'done_all';
+                        statusSpan.className = 'material-symbols-outlined text-[16px] text-[#9da5b9]';
+                    } else if (e.status === 'read') {
+                        statusSpan.innerText = 'done_all';
+                        statusSpan.className = 'material-symbols-outlined text-[16px] text-blue-400';
+                    }
+                }
+            })
             .listen('DeleteMessageEvent', (e) => {
                 console.log('Message Deleted Event:', e);
                 if (e.id) {
@@ -1668,17 +1784,7 @@ function setupRealtime() {
                             contentDiv.innerHTML = '<span class="material-symbols-outlined text-[16px]">block</span> This message was deleted';
 
                             // Remove attachments if any (simplicity)
-                            // Actually appendMessage handles attachments separately, we might need to clear them.
-                            // But replacing innerHTML of wrapper is harder.
-                            // Let's re-render utilizing appendMessage logic? No, too complex.
-                            // Just replace the text box content.
-                            // And hide attachments?
                             const attachmentsDiv = msgEl.querySelector('img, a');
-                            // This selector is weak.
-                            // Better: Reload chat or strict DOM manipulation?
-                            // Strict DOM:
-                            // The structure is Wrapper -> [Attachments, TextDiv].
-                            // We should remove attachments siblings.
                             while (contentDiv.previousElementSibling) {
                                 contentDiv.previousElementSibling.remove();
                             }
@@ -1688,17 +1794,17 @@ function setupRealtime() {
             });
     }
 }
-async function markAsDelivered(messageId) {
+async function markAsDelivered(messageId, type = 'text') {
     try {
         await fetch(`${API_BASE_URL}/message/delivered`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
+            headers: {
+                'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 'X-XSRF-TOKEN': decodeURIComponent(document.cookie.split('; ').find(row => row.startsWith('XSRF-TOKEN='))?.split('=')[1] || '')
             },
             credentials: 'include',
-            body: JSON.stringify({ message_id: messageId })
+            body: JSON.stringify({ message_id: messageId, type: type })
         });
         console.log("Marked as delivered:", messageId);
     } catch (e) {
@@ -1707,14 +1813,14 @@ async function markAsDelivered(messageId) {
 }
 
 // --- Lightbox / Media Viewer ---
-window.viewMedia = function(url, type) {
+window.viewMedia = function (url, type) {
     let modal = document.getElementById('media-lightbox');
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'media-lightbox';
         modal.className = 'fixed inset-0 z-[100] hidden bg-black/95 flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-200';
         modal.onclick = (e) => {
-            if(e.target === modal) closeMediaLightbox();
+            if (e.target === modal) closeMediaLightbox();
         };
         modal.innerHTML = `
             <button onclick="closeMediaLightbox()" class="absolute top-6 right-6 text-white/50 hover:text-white transition-colors p-2 z-50 rounded-full hover:bg-white/10">
@@ -1723,10 +1829,10 @@ window.viewMedia = function(url, type) {
             <div id="media-content" class="w-full h-full flex items-center justify-center overflow-hidden relative"></div>
         `;
         document.body.appendChild(modal);
-        
+
         // Keyboard support
         document.addEventListener('keydown', (e) => {
-             if (e.key === 'Escape') closeMediaLightbox();
+            if (e.key === 'Escape') closeMediaLightbox();
         });
     }
 
@@ -1739,23 +1845,23 @@ window.viewMedia = function(url, type) {
         img.className = 'max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-300';
         content.appendChild(img);
     } else if (type === 'video') {
-         const video = document.createElement('video');
-         video.src = url;
-         video.controls = true;
-         video.autoplay = true;
-         video.className = 'max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-300';
-         content.appendChild(video);
+        const video = document.createElement('video');
+        video.src = url;
+        video.controls = true;
+        video.autoplay = true;
+        video.className = 'max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-300';
+        content.appendChild(video);
     }
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 }
 
-window.closeMediaLightbox = function() {
+window.closeMediaLightbox = function () {
     const modal = document.getElementById('media-lightbox');
     if (modal) {
         const video = modal.querySelector('video');
-        if (video) video.pause(); 
+        if (video) video.pause();
         modal.classList.add('hidden');
         modal.classList.remove('flex');
     }

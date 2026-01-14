@@ -20,6 +20,9 @@ class VoiceMessage extends Model
         'file_duration',
         'status',
         'read_at',
+        'updated_by',
+        'delete_from_sender',
+        'delete_from_receiver',
     ];
     public function conversation()
     {
