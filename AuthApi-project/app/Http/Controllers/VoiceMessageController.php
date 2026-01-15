@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 
+use App\Events\DeleteVoiceMsgEvent;
+
 class VoiceMessageController extends BaseController
 {
     public function sendVoiceMessage(Request $request)
@@ -115,6 +117,7 @@ public function delvoiceMessage(Request $request){
                 'deleted_at' => now(),
             ]);
             $voicemsg->delete();
+            DeleteVoiceMsgEvent::dispatch($voicemsg);
         }
 
         return $this->Response(true, 'Voice message deleted successfully', null, 200);

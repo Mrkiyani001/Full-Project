@@ -651,6 +651,18 @@
     </script>
     <script src="js/config.js"></script>
     <script src="js/site_branding.js"></script>
+    <script>
+        // Handle Google Login Redirect
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            if (token) {
+                // If token is present, it means Google Login was successful (and cookie is likely set)
+                // We redirect to loading screen which handles session initialization
+                window.location.href = 'loading-screen.html';
+            }
+        });
+    </script>
 
 </body>
 </html>

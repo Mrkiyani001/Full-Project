@@ -31,6 +31,9 @@ Route::post('login', [AuthController::class, 'login']);
 Route::get('login', function () {
     return response()->json(['message' => 'Unauthorized'], 401);
 })->name('login');
+
+Route::get('auth/google', [AuthController::class, 'redirectToGoogle']);
+Route::get('auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
 Route::get('settings', [SettingsController::class, 'index']);
 
 Route::post('forget_password', [AuthController::class, 'forget_password']);

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Auth\Events\Verified;
+use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends BaseController
 {
@@ -53,6 +54,45 @@ class AuthController extends BaseController
             return $this->Response(false, $e->getMessage(), null, 500);
         }
     }
+        public function redirectToGoogle(){
+            return Socialite::driver('google')->stateless()->redirect();
+        }
+        
+        public function handleGoogleCallback(){
+            try{
+                $googleUser = Socialite::driver('google')->stateless()->user();
+                
+                // Check if user exists
+                $user = User::where('email', $googleUser->getEmail())->first();
+                
+                if (!$user) {
+                    // Register new user
+                    $user = User::create([
+                        'name' => $googleUser->getname(),
+                        'email' => $googleUser->getEmail(),
+                        'google_id' => $googleUser->getId(),
+                        'password' => Hash::make(Str::random(16)), 
+                        'email_verified_at' => now(), 
+                    ]);
+                    $user->assignRole('user');
+                } else {
+                    // Link Google ID if not linked
+                    if (!$user->google_id) {
+                        $user->update(['google_id' => $googleUser->getId()]);
+                    }
+                }
+                
+                $token = auth('api')->login($user);
+                
+                // Redirect to Frontend with Token
+                $frontendUrl = env('FRONTEND_URL'); 
+                return redirect("{$frontendUrl}/index.html?token={$token}")->withCookie($this->getAuthCookie($token));            
+            }
+            catch(\Exception $e){
+                Log::error('Google Login Error: ' . $e->getMessage());
+                return $this->Response(false, 'Google Login Failed: ' . $e->getMessage(), null, 500);
+            }
+        }
     public function login(Request $request)
     {
         $this->validateRequest($request, [

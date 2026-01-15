@@ -1115,7 +1115,7 @@ function appendMessage(msg) {
             <div class="relative flex items-center gap-3 p-3.5 rounded-3xl min-w-[220px] transition-all duration-200 
                 ${isMe 
                     ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white rounded-br-lg shadow-lg shadow-indigo-500/20' 
-                    : 'bg-[#1E232F] text-slate-200 border border-white/5 rounded-bl-lg shadow-sm'}">
+                    : 'bg-[#1E232F] text-slate-200 border border-white/5 rounded-bl-lg shadow-sm'} group">
                 
                 <!-- Play/Pause Button -->
                 <button id="btn-${uniqueId}" onclick="playVoice('${url}', '${uniqueId}')" 
@@ -1139,6 +1139,23 @@ function appendMessage(msg) {
 
                 <!-- Hidden Audio Tag -->
                 <audio id="audio-${uniqueId}" src="${url}" onended="resetVoiceUI('${uniqueId}')" ontimeupdate="updateVoiceProgress('${uniqueId}')"></audio>
+
+                <!-- Message Menu -->
+                <div class="absolute top-1 right-1 z-10 transition-opacity">
+                    <button onclick="toggleMessageMenu('voice-${msg.id}')" class="p-1 rounded-full bg-black/40 text-white hover:bg-black/60 backdrop-blur-sm">
+                        <span class="material-symbols-outlined text-[14px]">more_vert</span>
+                    </button>
+                    <div id="msg-menu-voice-${msg.id}" class="hidden absolute right-0 top-full mt-1 w-40 bg-[#1e2532] border border-white/10 rounded-xl shadow-xl overflow-hidden flex flex-col z-50">
+                        <button onclick="deleteMsg(${msg.id}, 'me', 'voice')" class="px-3 py-2.5 text-left text-xs text-slate-300 hover:bg-white/5 hover:text-white transition-colors w-full flex items-center gap-2">
+                             Delete for me
+                        </button>
+                        ${isMe ? `
+                        <button onclick="deleteMsg(${msg.id}, 'everyone', 'voice')" class="px-3 py-2.5 text-left text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors w-full flex items-center gap-2 border-t border-white/5">
+                             Delete for everyone
+                        </button>
+                        ` : ''}
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -1321,13 +1338,15 @@ function cancelEdit() {
     if (cancelBtn) cancelBtn.classList.add('hidden');
 }
 
-async function deleteMsg(id, type) {
-    toggleMessageMenu(id);
+async function deleteMsg(id, type, msgSource = 'text') {
+    toggleMessageMenu(msgSource === 'voice' ? `voice-${id}` : id);
     if (!confirm(type === 'everyone' ? 'Delete for everyone?' : 'Delete for me?')) return;
 
+    const endpoint = msgSource === 'voice' ? '/delvoicemsg' : '/deletemessage';
+
     try {
-        const response = await fetch(`${API_BASE_URL}/deletemessage`, {
-            method: 'DELETE', // Change to DELETE method? No, API definition is DELETE route.
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            method: 'DELETE',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({ id: id, delete_type: type })
@@ -1336,17 +1355,36 @@ async function deleteMsg(id, type) {
         const data = await response.json();
         if (data.success || response.ok) {
             showToast('Message deleted', 'success');
-            // Remove from DOM immediately
-            const el = document.getElementById(`msg-${id}`);
-            if (el) el.remove();
+            
+            // Remove from DOM
+            const elId = msgSource === 'voice' ? `msg-${id}-voice` : `msg-${id}`;
+            // Correct ID check based on appendMessage: wrapper.id = `msg-${msg.id}-${msg.type || 'text'}`
+            // For voice: type='voice', so params: id, type, 'voice' -> `msg-${id}-voice`
+            
+            let el = document.getElementById(elId);
+            if (!el && msgSource === 'voice') {
+                 // Fallback check
+                 el = document.getElementById(`msg-${id}-voice`);
+            } else if (!el) {
+                 el = document.getElementById(`msg-${id}-text`);
+            }
 
-            // If delete for everyone, backend might send event, but for 'me' we just remove.
+            if (el) el.remove();
+            else {
+                // If ID pattern matches appendMessage logic exactly:
+                // wrapper.id = `msg-${msg.id}-${msg.type || 'text'}`
+                const exactId = `msg-${id}-${msgSource}`;
+                const fallbackEl = document.getElementById(exactId);
+                if(fallbackEl) fallbackEl.remove();
+            }
+
             loadConversations();
         } else {
             showToast(data.message || 'Failed to delete', 'error');
         }
     } catch (e) {
         showToast('Error deleting message', 'error');
+        console.error(e);
     }
 }
 
@@ -1769,28 +1807,63 @@ function setupRealtime() {
                 console.log('Message Deleted Event:', e);
                 if (e.id) {
                     // Find the message element
-                    const msgEl = document.getElementById(`msg-${e.id}`);
+                    const msgEl = document.getElementById(`msg-${e.id}-text`);
                     if (msgEl) {
                         // Update UI to "Deleted" state
                         const contentDiv = msgEl.querySelector('.bg-primary, .bg-surface-border');
                         if (contentDiv) {
                             contentDiv.className = 'bg-surface-border/50 px-4 py-3 rounded-2xl text-slate-400 text-sm leading-relaxed italic border border-white/5 flex items-center gap-2';
-                            if (msgEl.classList.contains('items-end')) {
-                                // If it was my message, maybe keep right align but style logic is same
-                                contentDiv.className += ' rounded-br-none';
-                            } else {
-                                contentDiv.className += ' rounded-bl-none';
-                            }
-                            contentDiv.innerHTML = '<span class="material-symbols-outlined text-[16px]">block</span> This message was deleted';
+                             // Remove attachments if any (simplicity)
+                            const attachmentsDiv = msgEl.querySelector('img, a') ? msgEl.querySelectorAll('.grid, a') : null;
+                             if(attachmentsDiv) {
+                                 attachmentsDiv.forEach(el => el.remove());
+                             }
 
-                            // Remove attachments if any (simplicity)
-                            const attachmentsDiv = msgEl.querySelector('img, a');
-                            while (contentDiv.previousElementSibling) {
-                                contentDiv.previousElementSibling.remove();
-                            }
+                            contentDiv.innerHTML = '<span class="material-symbols-outlined text-[16px]">block</span> This message was deleted';
                         }
                     }
                 }
+            })
+            .listen('DeleteVoiceMsgEvent', (e) => {
+                 console.log('Voice Message Deleted Event:', e);
+                 if (e.voiceMsg && e.voiceMsg.id) {
+                     // Try finding the voice message element
+                     const voiceEl = document.getElementById(`msg-${e.voiceMsg.id}-voice`); // Assuming this ID structure from appendMessage
+                     if (voiceEl) {
+                          // Replace the entire voice content with "This message was deleted"
+                          // We need to keep the structure (Avatar, etc) if receiver, but simpler to just replace the INNER content container
+                          const innerContainer = voiceEl.querySelector('div.flex.flex-col'); // Inner wrapper
+                          
+                          if (innerContainer) {
+                               // Find the main bubble (the gradient or gray box)
+                               // It's the first child usually in the logic
+                               const bubble = innerContainer.firstElementChild; 
+                               if (bubble) {
+                                   // Create deleted bubble
+                                   const deletedHtml = `
+                                     <div class="italic text-slate-400 text-sm border border-white/10 px-3 py-2 rounded-xl flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-[16px]">block</span> Message deleted
+                                     </div>
+                                   `;
+                                   innerContainer.innerHTML = deletedHtml + (innerContainer.lastElementChild.outerHTML || ''); // Preserve meta time if possible, or just replace
+                                   // Actually, let's just replace the bubble part
+                                   // But `appendMessage` structure is wrapper -> inner -> content + meta.
+                                   // Content for voice is the whole player div.
+                                   // Let's replace the whole innerWrapper content with the deleted text bubble + time.
+                                   
+                                   const time = new Date(e.delete_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                   innerContainer.innerHTML = `
+                                        <div class="italic text-slate-400 text-sm border border-white/10 px-3 py-2 rounded-xl flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-[16px]">block</span> Message deleted
+                                        </div>
+                                        <div class="flex items-center gap-1 mt-0.5 opacity-50">
+                                            <span class="text-[10px]">${time}</span>
+                                        </div>
+                                   `;
+                               }
+                          }
+                     }
+                 }
             });
     }
 }

@@ -28,7 +28,9 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'email_login_alerts',
         'push_login_alerts',
         'suspicious_activity_alerts',
-        'status'
+        'suspicious_activity_alerts',
+        'status',
+        'google_id'
     ];
 
 

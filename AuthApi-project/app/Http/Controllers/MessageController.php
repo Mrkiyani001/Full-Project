@@ -250,7 +250,7 @@ class MessageController extends BaseController
                 Message::where('conversation_id', $request->conversation_id)
                     ->where('receiver_id', $user->id)
                     ->where('status', '!=', 'read')
-                    ->update(['status' => 'read']);
+                    ->update(['status' => 'read', 'read_at' => now()]);
 
                 $lastMessage->refresh();
                 MessageStatusEvent::dispatch($lastMessage, 'read');
@@ -269,7 +269,7 @@ class MessageController extends BaseController
                 VoiceMessage::where('conversation_id', $request->conversation_id)
                     ->where('receiver_id', $user->id)
                     ->where('status', '!=', 'read')
-                    ->update(['status' => 'read']);
+                    ->update(['status' => 'read', 'read_at' => now()]);
 
                 $lastVoiceMessage->refresh();
                 VoiceMessageStatusEvent::dispatch($lastVoiceMessage, 'read');

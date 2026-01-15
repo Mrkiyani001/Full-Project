@@ -193,8 +193,8 @@
                 <div class="h-[1px] flex-1 bg-slate-700/50"></div>
             </div>
             <!-- Social Login Buttons -->
-            <div class="grid grid-cols-2 gap-4">
-                <button
+            <div class="grid grid-cols-1 gap-4">
+                <button type="button" onclick="window.location.href = `${API_BASE_URL}/auth/google`"
                     class="flex items-center justify-center gap-3 bg-surface-dark border border-slate-700/50 hover:bg-slate-800 hover:border-slate-600 rounded-xl py-3 transition-all duration-300 group">
                     <!-- Google SVG Icon -->
                     <svg class="w-5 h-5 group-hover:scale-110 transition-transform duration-300" fill="none"
@@ -212,18 +212,7 @@
                             d="M12.24 4.74966C13.9509 4.7232 15.6044 5.36697 16.8434 6.54867L20.2695 3.12262C18.1001 1.0855 15.2208 -0.034466 12.24 0.000808666C7.7029 0.000808666 3.55371 2.55822 1.5166 6.60879L5.50253 9.69967C6.45064 6.86106 9.10447 4.74966 12.24 4.74966Z"
                             fill="#EA4335"></path>
                     </svg>
-                    <span class="text-sm font-semibold text-slate-300 group-hover:text-white">Google</span>
-                </button>
-                <button
-                    class="flex items-center justify-center gap-3 bg-surface-dark border border-slate-700/50 hover:bg-slate-800 hover:border-slate-600 rounded-xl py-3 transition-all duration-300 group">
-                    <!-- Apple SVG Icon -->
-                    <svg class="w-5 h-5 fill-white group-hover:scale-110 transition-transform duration-300"
-                        viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path
-                            d="M17.5318 13.0853C17.5076 15.6429 19.6738 17.1557 19.756 17.2038C19.7028 17.3753 19.3858 18.4715 18.6185 19.5936C17.957 20.5555 17.2662 21.5039 16.1662 21.525C15.0903 21.5459 14.7461 20.887 13.507 20.887C12.2676 20.887 11.8795 21.525 10.8688 21.5459C9.83584 21.5671 9.07062 20.6974 8.39704 19.7196C7.02672 17.7348 5.97544 14.1032 7.3792 11.6669C8.07764 10.4568 9.32488 9.69192 10.7416 9.67086C11.7753 9.64998 12.7441 10.3686 13.3776 10.3686C14.0113 10.3686 15.2015 9.47954 16.4251 9.64998C16.9407 9.67198 18.381 9.8596 19.2934 11.1923C19.2155 11.2384 17.5562 12.2078 17.5318 13.0853ZM15.0211 7.22858C15.5847 6.54556 15.9622 5.59758 15.8585 4.65918C15.0216 4.69288 14.0113 5.21814 13.4111 5.91636C12.8942 6.51658 12.4285 7.49132 12.5454 8.41846C13.4725 8.49072 14.4578 7.9118 15.0211 7.22858Z">
-                        </path>
-                    </svg>
-                    <span class="text-sm font-semibold text-slate-300 group-hover:text-white">Apple</span>
+                    <span class="text-sm font-semibold text-slate-300 group-hover:text-white">Continue with Google</span>
                 </button>
             </div>
         </div>

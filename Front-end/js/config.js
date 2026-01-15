@@ -44,4 +44,39 @@ if (typeof self !== 'undefined') {
     self.firebaseConfig = firebaseConfig;
 }
 
-console.log('App Config Loaded:', { API_BASE_URL, PUBLIC_URL });
+// console.log('App Config Loaded:', { API_BASE_URL, PUBLIC_URL });
+
+/**
+ * Console Security
+ * Restricts console access for non-super admins.
+ */
+(function() {
+    try {
+        const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
+        const roles = userData.roles || [];
+        const isSuperAdmin = roles.some(r => r.name === 'super admin');
+
+        if (!isSuperAdmin) {
+            const noop = () => {};
+            const consoleMethods = ['log', 'debug', 'info', 'warn', 'error', 'table', 'dir'];
+
+            // Save original console.log for the warning
+            const originalLog = console.log;
+
+            // Disable all methods
+            consoleMethods.forEach(method => {
+                console[method] = noop;
+            });
+
+            // Show Warning
+            setTimeout(() => {
+                originalLog('%cSTOP!', 'color: red; font-size: 50px; font-weight: bold; background-color: white; padding: 10px; border-radius: 5px;');
+                originalLog('%cThis is a browser feature intended for developers. If someone told you to copy-paste something here to enable a feature or "hack" someone\'s account, it is a scam and will give them access to your account.', 'color: white; font-size: 18px; line-height: 1.5;');
+                originalLog('%cAccess Denied: Ara oo Bhosdike hack kra ga baap ko.', 'color: red; font-size: 16px; font-weight: bold;');
+            }, 1000);
+        }
+    } catch (e) {
+        // Checking failed, secure by default
+        console.log = function() {};
+    }
+})();
